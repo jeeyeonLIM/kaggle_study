@@ -1,0 +1,306 @@
+---
+title: "car_noise"
+author: "jy"
+output: html_document
+---
+
+### 1. 데이터 로딩
+
+```{r}
+
+library(tidyverse)
+library(reshape2)
+library(ggthemes)
+options(scipen=100)
+
+car_noise= read.csv('car_noise_specification_datasets.csv', 
+             sep = "\t", 
+             stringsAsFactors = F, 
+             na.strings = c("", "NA"))
+
+summary(car_noise)
+# (1895, 72)
+
+
+
+```
+### 결측치 제거 
+
+* 결측치 처리 전략(아래 중 1~3번을 채택.)
+[삭제]
+- 1. 데이터가 NaN일 때 그대로 날려버린다 (complete drop)
+- 2. 데이터가 없는 최소의 개수와 같이 규칙을 정해서 날려버린다
+- 3. 데이터가 거의 없는 feature는 feature 자체를 날려버린다
+[대체]
+- 4. 최빈값, 평균값으로 NaN을 채워버린다
+- 5. SMOTE, KNN 같은 방법을 사용해서 근사한 instance의 값으로 채우기
+
+
+### 2. Row 제거
+- 소음발생 영향요인 알 수 없는 cqa테이블과 결합되지 못한 경우 제외
+- 828/1895 (0.4369393) 제거
+- 1067(0.5630607) 남겨둠
+```{r}
+
+### 범주형 변수 구성 살펴보기
+for (i in 13:72){
+  if (is.character(car_noise[,i])){
+    print(car_noise %>% 
+            group_by_at(i) %>% summarise(n=n()) %>% arrange(desc(n)))
+  }
+}
+
+### cqa 테이블과 join key 없는 경우 자동차 특성값이 전부 NAN! 따라서 이들 제거하고 분석.
+  
+  car_noise_na= car_noise %>% filter(model_id == "NaN")
+  summary(car_noise_na)
+  
+  # car_noise_complete = car_noise %>% select(X,brand, model, spec, year, 
+  #                                           dB_at_idle, dB_at_50kmh, dB_at_80kmh, 
+  #                                           dB_at_100kmh, dB_at_120kmh, dB_at_140kmh)
+  #car_noise_complete = car_noise %>% filter(!is.na(model_id))
+  car_noise_complete = car_noise %>% filter( model_id != "NaN")
+  summary(car_noise_complete)
+  
+  for (i in 13:72){
+    if (is.character(car_noise[,i])){
+      print(car_noise %>% 
+              group_by_at(i) %>% summarise(n=n()) %>% arrange(desc(n)))
+    }
+  }
+  
+  
+### 추가적으로 
+  # 제거된 경우의 dB 차이를 보고 Bias 영향 탐색하기
+  diff = car_noise %>% 
+    mutate(cqa_na= ifelse(model_id =="NaN",1,0)) %>% 
+    select(contains("dB_at"), cqa_na) %>% 
+    melt(id="cqa_na")
+  
+  ggplot(diff, aes(x = value)) +  
+    geom_histogram(aes(group = as.factor(cqa_na), 
+                     colour = as.factor(cqa_na), 
+                     fill = as.factor(cqa_na)),position="identity",alpha=0.5, bins = 30)+
+    geom_density(alpha=0.6)+
+    facet_grid(rows = vars(variable))
+  
+  # 너무 다 다른 분포ㅜ
+  ks.test(diff$value[diff$cqa_na==0&diff$variable=="dB_at_idle"],
+          diff$value[diff$cqa_na==1&diff$variable=="dB_at_idle"])
+  ks.test(diff$value[diff$cqa_na==0&diff$variable=="dB_at_50kmh"],
+          diff$value[diff$cqa_na==1&diff$variable=="dB_at_50kmh"])
+  ks.test(diff$value[diff$cqa_na==0&diff$variable=="dB_at_80kmh"],
+          diff$value[diff$cqa_na==1&diff$variable=="dB_at_80kmh"])
+  ks.test(diff$value[diff$cqa_na==0&diff$variable=="dB_at_100kmh"],
+          diff$value[diff$cqa_na==1&diff$variable=="dB_at_100kmh"])
+  ks.test(diff$value[diff$cqa_na==0&diff$variable=="dB_at_120kmh"],
+          diff$value[diff$cqa_na==1&diff$variable=="dB_at_120kmh"])
+  ks.test(diff$value[diff$cqa_na==0&diff$variable=="dB_at_140kmh"],
+          diff$value[diff$cqa_na==1&diff$variable=="dB_at_140kmh"])
+
+
+```
+
+### 3. col 제거
+- cqa 데이터 중 값이 너무 없는 칼럼 제외.
+- 거의 100%결측 : model_co2_cqa, ExtColors_cqa	,IntColors_cqa
+- 63% ~67% 결측 : -model_engine_bore_mm_cqa,
+                  -model_engine_bore_in_cqa,
+                  -model_engine_stroke_mm_cqa,
+                  -model_engine_stroke_in_cqa,
+                  -model_top_speed_kph_cqa,
+                  -model_top_speed_mph_cqa,
+                  -model_0_to_100_kph_cqa
+- 중복값 : -model_id,
+        -model_id_cqa,
+        -make_display_cqa,
+        -model_make_display_cqa,
+        -model_make_id_cqa,
+        -model_name_cqa,
+        -model_year_cqa
+
+- 단위가 중복 : -model_weight_lbs_cqa,
+      -model_height_in_cqa,
+      -model_wheelbase_in_cqa,
+      
+      -model_width_in_cqa,
+      -model_length_in_cqa,
+      
+      -model_mpg_city_cqa,
+      -model_mpg_hwy_cqa,
+      -model_mpg_mixed_cqa,
+      -model_fuel_cap_g_cqa,
+      
+      -model_engine_ci_cqa,
+      -model_engine_l_cqa,
+      
+      -model_engine_power_hp_cqa,
+      -model_engine_power_ps_cqa,
+      -model_engine_power_rpm_cqa,
+      
+      -model_engine_torque_lbft_cqa,
+      -model_engine_torque_nm_cqa,
+      -model_engine_torque_rpm_cqa
+                  
+```{r}
+#install.packages("mice");
+library(mice)
+result=md.pattern(car_noise_complete)
+result
+
+#### Kaggle에 올라와있던 코드
+  showNA <- function(mydf, mytitle){
+    mydf %>% is.na %>% reshape2::melt() %>% 
+    ggplot(data = .,aes(x = Var2, y = Var1)) + 
+      geom_tile(aes(fill = value,width=0.95)) + 
+      coord_flip() + 
+      scale_fill_manual(values = c("grey95","grey20")) + 
+      theme_fivethirtyeight(12) + 
+      theme(legend.position='None',
+            legend.direction='horizontal',
+            panel.grid.major=element_blank(),
+            axis.title.x=element_blank(),
+            axis.title.y=element_blank(),
+            plot.margin=unit(c(.1,.1,.1,.1), "cm")) + 
+      labs(title = 'Data completeness, missing values in black', subtitle = mytitle)
+  }
+  showNA(car_noise_complete, "car_complete dataframe")
+
+### 결측치 수 살펴보고, 제거할 칼럼 확인
+  remove_col = data.frame("colname"=c(colnames(car_noise_complete)) ,
+                          'percentage_na' = apply(car_noise_complete, 2,
+                                                  function(x) sum(is.na(x)))/nrow(car_noise_complete)) %>%
+    arrange(desc(percentage_na))
+  remove_col # model_co2_cqa, ExtColors_cqa	,IntColors_cqa 제거 
+
+### 결측치 제거한 최종 데이터셋 car_noise_complete 
+  car_noise_complete= car_noise_complete %>% 
+    select(
+      # 결측치 심각 
+        -model_co2_cqa, -ExtColors_cqa	,-IntColors_cqa,
+        
+      # 결측치 60%이상
+        -model_engine_bore_mm_cqa,
+        -model_engine_bore_in_cqa,
+        -model_engine_stroke_mm_cqa,
+        -model_engine_stroke_in_cqa,
+ 
+        -model_0_to_100_kph_cqa,
+ 
+        -model_top_speed_kph_cqa,
+        -model_top_speed_mph_cqa,
+      
+      # 중복값 
+        -model_id,
+        -model_id_cqa,
+        -make_display_cqa,
+        -model_make_display_cqa,
+        -model_make_id_cqa,
+        -model_name_cqa,
+        -model_year_cqa)
+  
+  showNA(car_noise_complete, "car_complete dataframe") # 좋아졌음
+
+  
+### 단위가 중복된 변수들 살펴보고 결측치 수 비교-> 더 적은 결측치 가지는 값 사용 
+
+  duplicate_dt= 
+    car_noise_complete %>% 
+    select(
+        model_weight_kg_cqa,
+        model_weight_lbs_cqa,
+        
+        model_height_in_cqa,
+        model_height_mm_cqa,
+                
+        model_wheelbase_in_cqa,
+        model_wheelbase_mm_cqa,
+        
+        model_width_in_cqa,
+        model_width_mm_cqa,
+        
+        model_length_in_cqa,
+        model_length_mm_cqa)
+  
+  cor(duplicate_dt)
+  
+  duplicate_dt= 
+    car_noise_complete %>% 
+    select(
+        model_lkm_city_cqa,
+        model_lkm_hwy_cqa,
+        model_lkm_mixed_cqa,
+        
+        model_mpg_city_cqa,
+        model_mpg_hwy_cqa,
+        model_mpg_mixed_cqa,
+        
+        model_fuel_cap_g_cqa,
+        model_fuel_cap_l_cqa)
+  cor(duplicate_dt)
+  
+  duplicate_dt= 
+    car_noise_complete %>% 
+    select(
+        model_engine_cc_cqa,
+        model_engine_ci_cqa,
+        model_engine_l_cqa,
+        
+        model_engine_power_hp_cqa,
+        model_engine_power_kw_cqa,
+        model_engine_power_ps_cqa,
+        model_engine_power_rpm_cqa,
+        
+        model_engine_torque_kgm_cqa,
+        model_engine_torque_lbft_cqa,
+        model_engine_torque_nm_cqa,
+        model_engine_torque_rpm_cqa)
+  cor(duplicate_dt)
+
+  ### 단위 중복칼럼 제거 
+  car_noise_complete= car_noise_complete %>% 
+    select(
+      -model_weight_lbs_cqa,
+      -model_height_in_cqa,
+      -model_wheelbase_in_cqa,
+      
+      -model_width_in_cqa,
+      -model_length_in_cqa,
+      
+      -model_mpg_city_cqa,
+      -model_mpg_hwy_cqa,
+      -model_mpg_mixed_cqa,
+      -model_fuel_cap_g_cqa,
+      
+      -model_engine_ci_cqa,
+      -model_engine_l_cqa,
+      
+      -model_engine_power_hp_cqa,
+      -model_engine_power_ps_cqa,
+      -model_engine_power_rpm_cqa,
+      
+      -model_engine_torque_lbft_cqa,
+      -model_engine_torque_nm_cqa,
+      -model_engine_torque_rpm_cqa
+    )
+      
+      
+```
+
+
+
+<!-- ### Price 정보 있는 자료, 자료가 너무 적어 분석에 활용하지는 않았음. -->
+
+<!-- ```{r} -->
+<!-- a= read.csv("datasets_175168_395113_CarPrice_Assignment.csv") -->
+<!-- a %>% group_by(CarName) %>% summarise(n=n()) %>% arrange(desc(n)) -->
+
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- car_noise = car_noise %>% mutate(brand= tolower(brand)) -->
+<!-- car_noise %>% filter(brand %in% c("audi","bmw")) -->
+
+<!-- ``` -->
+

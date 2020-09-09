@@ -1,0 +1,683 @@
+---
+title: "EDA"
+author: "jy"
+output: html_document
+---
+
+
+### 변수 대략적인 분포 missing value, complete 확인
+
+```{r}
+
+library(skimr)
+#numeric
+skimmed <- skim_to_wide(car_noise_complete %>% select_if(is.numeric))
+skimmed[, c(1:7,13)]
+
+#character
+skimmed <- skim_to_wide(car_noise_complete %>% select_if(is.character))
+skimmed
+
+```
+
+### 거시적 관점
+- Q1. 속도에 따른 Noise 변화? 
+  - 가설 : 속도 붙을수록 엔진이 활동적으로 변화하기 때문에 Noise 증가할 것이다. 
+```{r}
+
+options(scipen=100)
+library(tidyverse)
+library(ggplot2)
+library(reshape2)
+
+library(reshape2)
+library(ggthemes)
+
+library(ggridges)
+library(grid)
+
+library(ggstance)
+#install.packages("ggstance")
+
+
+dB_chk=
+    car_noise_complete %>% 
+    select(contains("dB_at")) %>% 
+    melt()
+
+ggplot(dB_chk, aes(x = value, y = variable)) +
+  geom_density_ridges(aes(fill = variable), alpha=0.2, scale=0.8) +
+  geom_boxploth(aes(fill = variable), width = 0.06, outlier.shape = NA)+
+  theme_bw() + theme(axis.text.x = element_text(size=15),
+                       axis.text.y = element_text(size=15),
+                     axis.title=element_text(size=15),
+                     
+                     legend.text = element_text(size = 15))+xlab("Noise(dB)")+ylab("")
+
+```
+- 속도 증가할수록 Noise dB 증가하는 추세 
+
+
+
+### 연속형 변수 확인
+- 이건 모델링 할 때 chk!
+```{r}
+
+dB_at_idle
+dB_at_100kmh
+dB_at_120kmh
+dB_at_140kmh
+dB_at_50kmh
+dB_at_80kmh
+
+model_seats_cqa
+
+model_body_cqa
+model_doors_cqa
+model_weight_kg_cqa
+model_height_mm_cqa
+model_wheelbase_mm_cqa
+model_width_mm_cqa
+model_length_mm_cqa
+model_lkm_city_cqa
+model_lkm_hwy_cqa
+model_lkm_mixed_cqa
+model_fuel_cap_l_cqa
+
+model_engine_cc_cqa
+model_engine_cyl_cqa
+model_engine_valves_cqa
+model_engine_valves_per_cyl_cqa
+model_engine_compression_cqa
+model_engine_power_kw_cqa
+model_engine_torque_kgm_cqa
+
+```
+
+
+- Q2. Brand별 dB? 
+- Brand별로 추구하고자 하는 가치가 다르며, 다양한 형태로 자동차 출시하고 있기 때문에 dB에도 영향을 줄 것이라고 생각함.
+```{r}
+
+### 어떤 브랜드 차가 가장 많나
+  many=car_noise_complete %>% group_by(brand) %>% summarise(n=n()) %>% arrange(desc(n)) %>% 
+    filter(n>= 50)
+    # BMW, Audi, Volkswagen, Mecedes, Ford, Toyota ... 
+
+### 어떤 브랜드의 모델이 가장 많나
+  car_noise_complete %>% group_by(brand,model) %>% summarise(n=n()) %>% arrange(desc(n))
+    # Volkswagen Golf, BMW 1, BMW 5, Ford Focus, ... 
+
+### 자동차 브랜드 TOP5(가장 데이터 값이 많은) year별 
+# 유휴중일 때의 소음
+  idle=car_noise_complete %>% 
+    filter(brand %in% c("BMW", "Audi", "Volkswagen", "Mecedes", "Ford", "Toyota")) %>% 
+    group_by(brand,year) %>% 
+    summarise(idle=mean(dB_at_100kmh))
+  
+  g1= 
+    ggplot(idle) + 
+    geom_point(aes(x=as.factor(year),y=idle,group=brand,color=brand),size=1.5) + 
+    geom_line(aes(x=as.factor(year),y=idle,group=brand,color=brand),size=1.5)+  
+    #geom_hline(yintercept= vec, linetype = 'dotted', color='#2166AC', size = 1.5) +
+    theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  print(g1)
+  
+  
+# 전체일 때의 소음
+  idle1=car_noise_complete %>% 
+    filter(brand %in% c("BMW", "Audi", "Volkswagen", "Mecedes", "Ford", "Toyota")) %>% 
+    mutate(dB_mean = (dB_at_100kmh+dB_at_50kmh+dB_at_80kmh+
+                        dB_at_100kmh+dB_at_120kmh+dB_at_140kmh)/6) %>% 
+    group_by(brand,year) %>% 
+    summarise(idle=mean(dB_mean))
+
+  ggplot(idle1) + 
+    geom_point(aes(x=as.factor(year),y=idle,group=brand,color=brand),size=1.5) + 
+    geom_line(aes(x=as.factor(year),y=idle,group=brand,color=brand),size=1.5)+  
+    #geom_hline(yintercept= vec, linetype = 'dotted', color='#2166AC', size = 1.5) +
+      theme_bw() + theme(axis.text.x = element_text(size=15),
+                       axis.text.y = element_text(size=15),
+                     axis.title=element_text(size=15),
+                     legend.text = element_text(size = 15))+xlab("year")+ylab("Noise(dB)")
+  
+  
+  # 감소하는 추세이긴 하지만 2017 Toyota, 2016 Ford 값이 튄다. 
+  
+# 위에서 값 튀는 현상에 대해서 더 탐색해보기 
+  car_noise_complete %>% filter(brand == "Toyota"& year ==2017)
+  # 1691	Toyota	Prius	Hybrid	2017	-> 값이 하나밖에 없었고, 시끄럽다는 의견 
+  car_noise_complete %>% filter(brand == "Ford"& year ==2016)
+  # 622	Ford	Mustang	5.0 V8	2016	-> 이 모델이 포함. 스펙 보면 배기량(연료가 엔진에서 연소되는 양)이 5.0
+  
+```
+- 결과 해석 
+- 연도가 갈수록 점차 기술이 발달해서 엔진이나 타이어 등 기술적으로 개선되기 때문에 소음이 감소하는 것을 알 수 있음.
+- 이외에도 액티브 노이즈 컨트롤(편한 소리를 이용해 거슬리는 소리를 덮는 소리로 소음을 잡는 방법) 등 연구 효과가 아닐까?
+
+- 값이 튀었던 구간에 대해서는 아래와 같은 모델 때문임.
+- 1691	Toyota	Prius	Hybrid	2017	-> 값이 하나밖에 없었고, 시끄럽다는 의견 
+- 622	Ford	Mustang	5.0 V8	2016	-> 이 모델이 포함. 스펙 보면 배기량(연료가 엔진에서 연소되는 양)이 5.0
+
+
+
+- Q3. 브랜드별, 속도에 따른 dB 변화는? 어떻게 차이가 있을까? 
+  - 가설 : 소수의 스포츠카 dB과 일반 세단과는 차이가 극명할 것이라고 생각. 
+  - 추가적으로 공회전 상태일 때와 속도 빠를 때 Noise 차이가 큰 (즉 기울기가 큰) 차는 어떤 특징을 갖는 차일까?
+```{r}
+  
+  speed_dB=
+    car_noise_complete %>% 
+    select(contains("dB_at"), brand) %>% 
+    melt(id="brand") %>% 
+    mutate(speed=ifelse(variable == "dB_at_idle",0,
+                        ifelse(variable == "dB_at_50kmh",50,
+                               ifelse(variable == "dB_at_80kmh",80,
+                                      ifelse(variable == "dB_at_100kmh",100,
+                                             ifelse(variable == "dB_at_120kmh",120,140)))))) %>% 
+    group_by(brand, speed) %>% 
+    summarise(mean_speed= mean(value)) # %>% 
+    #filter(speed==0) %>% arrange(desc(mean_speed))
+  
+
+library(ggrepel )
+
+    #filter(brand %in% c("BMW", "Audi", "Volkswagen", "Mecedes", "Ford", "Toyota")) %>% 
+    ggplot(speed_dB, aes(x=speed,y=mean_speed,group=brand)) + 
+      geom_point(size=1) + 
+      geom_line(size=1)+  
+      #geom_hline(yintercept= vec, linetype = 'dotted', color='#2166AC', size = 1.5) +
+        theme_bw() + theme(axis.text.x = element_text(size=15),
+                       axis.text.y = element_text(size=15),
+                     axis.title=element_text(size=15),
+                     
+                     legend.text = element_text(size = 15))+xlab("Noise(dB)")+ylab("")
+  # geom_label(mapping = aes(label = factor(brand)),
+  #            hjust = 1.3,
+  #            size = 4,
+  #            family = 'NanumGothic',
+  #           fontface = 'bold')
+
+  
+```
+- McLaren, Lotus, Ford, Hummer, Saturn 순으로 speed =0일때부터(공회전) noise 심함. 
+- McLaren, Lotus: 대표적인 스포츠카 
+- Ford, Hummer, Saturn : 무거운 차
+- Lotus 기울기 큼.(즉 공회전상태일때는 비교적 조용한데 속도 빨라지면서 소음 급격히 증가한다는 의미)
+
+
+### 배기 계통
+- Q4. "배기 밸브의 개폐로 인해 배기 소음이 발생한다"
+    - 가설 :(실린더 헤드에 있는)배기밸브 수가 많으면 소음이 많이 발생할 것이다
+    - 실린더수, 밸브 수를 함께 탐색.
+```{r}
+
+    
+    ggplot(car_noise_complete,aes(model_engine_valves_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+theme_bw() + theme(axis.text.x = element_text(size=15),
+                       axis.text.y = element_text(size=15),
+                     axis.title=element_text(size=15),
+                     legend.text = element_text(size = 15))+xlab("밸브 수")+ylab("Noise(dB)")
+
+    ggplot(car_noise_complete,aes(model_engine_cyl_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+theme_bw() + theme(axis.text.x = element_text(size=15),
+                       axis.text.y = element_text(size=15),
+                     axis.title=element_text(size=15),
+                     legend.text = element_text(size = 15))+xlab("실린더 수")+ylab("Noise(dB)")
+    
+    ggplot(car_noise_complete,aes(model_engine_valves_per_cyl_cqa,dB_at_100kmh ))+
+      geom_point()+geom_smooth(method = 'lm' )+theme_bw() + theme(axis.text.x = element_text(size=15),
+                       axis.text.y = element_text(size=15),
+                     axis.title=element_text(size=15),
+                     legend.text = element_text(size = 15))+xlab("실린더당 밸브 수")+ylab("Noise(dB)")
+    
+      # dB_at_idle
+    # dB_at_50kmh
+    # dB_at_80kmh
+    # dB_at_100kmh
+    # dB_at_120kmh
+    # dB_at_140kmh
+    
+        # 엔진 배기 밸브와 실린더 수와 관계가 없다 
+    # But, model_engine_cyl_cqa(엔진 실린더 수)는 슈퍼카 기준 10 까지가 일반적이고
+    
+### Outlier 제거하면 - 별 차이 없어서 생략. 
+   # hypo= car_noise_complete %>% select(
+   #    model_engine_valves_cqa,
+   #    model_engine_cyl_cqa,
+   #    dB_at_140kmh
+   #    ) %>% 
+   #   filter(model_engine_valves_cqa<=40, model_engine_cyl_cqa<= 10 )
+   #  
+   #  # dB_at_idle
+   #  # dB_at_50kmh
+   #  # dB_at_80kmh
+   #  # dB_at_100kmh
+   #  # dB_at_120kmh
+   #  # dB_at_140kmh
+   #  
+   #  ggplot(car_noise_complete,aes(model_engine_valves_cqa,dB_at_100kmh ))+ 
+   #    geom_point()+geom_smooth(method = 'gam' )+theme_bw()
+   #  ggplot(car_noise_complete,aes(model_engine_cyl_cqa,dB_at_100kmh ))+ 
+   #    geom_point()+geom_smooth(method = 'gam' )+theme_bw()
+   #  # ggplot(car_noise_complete,aes(model_engine_valves_per_cyl_cqa,dB_at_100kmh ))+ 
+   #  #   geom_point()+geom_smooth(method = 'gam' )+theme_bw()
+   #  
+
+```
+
+- Q5. 엔진 배기량에 따라서 소음 어떻게 될까?
+```{r}
+
+  eda_y= 
+    car_noise_complete %>% 
+      select(contains("dB_at"), model_engine_cc_cqa) %>% 
+      melt(id="model_engine_cc_cqa") %>% 
+      mutate(speed=ifelse(variable == "dB_at_idle",0,
+                          ifelse(variable == "dB_at_50kmh",50,
+                                 ifelse(variable == "dB_at_80kmh",80,
+                                        ifelse(variable == "dB_at_100kmh",100,
+                                               ifelse(variable == "dB_at_120kmh",120,140))))))
+  
+  
+  ggplot(eda_y,aes(x=model_engine_cc_cqa,y=value)) + 
+      geom_point(size=1.5) + 
+      facet_grid(rows = vars(variable)) +
+      geom_smooth(method = 'gam') + theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  
+  a=eda_y %>% 
+    filter(variable == "dB_at_idle")
+    ggplot(a,aes(x=model_engine_cc_cqa,y=value)) + 
+      geom_point(size=1.5)+geom_smooth()+theme_bw()
+  a=eda_y %>% 
+    filter(variable == "dB_at_50kmh")
+    ggplot(a,aes(x=model_engine_cc_cqa,y=value)) + 
+      geom_point(size=1.5)+geom_smooth()+theme_bw()
+  a=eda_y %>% 
+    filter(variable == "dB_at_80kmh")
+    ggplot(a,aes(x=model_engine_cc_cqa,y=value)) + 
+      geom_point(size=1.5)+geom_smooth()+theme_bw()
+  a=eda_y %>% 
+    filter(variable == "dB_at_100kmh")
+    ggplot(a,aes(x=model_engine_cc_cqa,y=value)) + 
+      geom_point(size=1.5)+geom_smooth()+theme_bw()+
+      theme(axis.text.x = element_text(size=15),
+                       axis.text.y = element_text(size=15),
+                     axis.title=element_text(size=15),
+                     legend.text = element_text(size = 15))+xlab("엔진 배기량")+ylab("Noise(dB)")
+    
+    
+    
+  a=eda_y %>% 
+    filter(variable == "dB_at_120kmh")
+    ggplot(a,aes(x=model_engine_cc_cqa,y=value)) + 
+      geom_point(size=1.5)+geom_smooth()+theme_bw()
+  a=eda_y %>% 
+    filter(variable == "dB_at_140kmh")
+    ggplot(a,aes(x=model_engine_cc_cqa,y=value)) + 
+      geom_point(size=1.5)+geom_smooth()+theme_bw()
+  a=eda_y
+  # 엔진 배기량 증가할수록 데시벨도 증가하는 추세
+
+```
+
+
+- Q6. 정말 가솔린 차가 다른 차에 비해서 
+- 가솔린 : (휘발유) 끓는점이 낮아 인화성이 좋음. 디젤보다 적은 힘을 얻지만 소음이 더 적어 고급 승용차 및 소형차에 사용. 디젤엔진보다 부드러운 주행이 가능하며 고속 주행에 유리함.
+
+```{r}
+
+gasol= car_noise_complete %>% filter(model_engine_fuel_cqa=="Gasoline")
+
+  
+nrow(gasol)/nrow(car_noise_complete) # 전체 차량 중 가솔린 비율
+
+# 가솔린 vs 이외
+car_noise_complete = car_noise_complete %>% 
+  mutate(gasol = ifelse(model_engine_fuel_cqa=="Gasoline","Gasoline","Etc"))
+
+ggplot(car_noise_complete %>% filter(!is.na(model_engine_fuel_cqa)) 
+         , aes(x = dB_at_100kmh)) +  
+    geom_histogram(aes(group = as.factor(gasol), 
+                     colour = as.factor(gasol), 
+                     fill = as.factor(gasol)),position="identity",alpha=0.5, bins = 30)+
+    geom_density(alpha=0.6)+
+  theme_bw()
+?t.test
+t.test(car_noise_complete$dB_at_100kmh[car_noise_complete$gasol=="Gasoline"],
+       car_noise_complete$dB_at_100kmh[car_noise_complete$gasol=="Etc"], alternative = "less")
+
+
+
+# # 가솔린 vs 디젤
+# diesel= car_noise_complete %>% filter(model_engine_fuel_cqa=="Diesel")
+# compare = car_noise_complete %>% 
+#   filter(model_engine_fuel_cqa %in% c("Gasoline", "Diesel")) %>% 
+#   mutate(model_engine_fuel_cqa = ifelse(model_engine_fuel_cqa=="Gasoline","Gasoline","Diesel"))
+# 
+# ggplot(compare %>% filter(!is.na(model_engine_fuel_cqa)) 
+#          , aes(x = dB_at_100kmh)) +  
+#     geom_histogram(aes(group = as.factor(gasol), 
+#                      colour = as.factor(gasol), 
+#                      fill = as.factor(gasol)),position="identity",alpha=0.5, bins = 30)+
+#     geom_density(alpha=0.6)+
+#   theme_bw()
+
+
+```
+
+
+
+- 전체 numeric 변수의 영향 탐색 
+```{r}
+
+# model_engine_power_kw_cqa
+# model_engine_torque_kgm_cqa
+
+    ggplot(car_noise_complete,aes(model_engine_power_kw_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+theme_bw()+
+      theme(axis.text.x = element_text(size=15),
+                           axis.text.y = element_text(size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      #xlab("엔진 배기량")+
+      ylab("Noise(dB)")
+
+    ggplot(car_noise_complete,aes(model_engine_torque_kgm_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+theme_bw()+
+        theme(axis.text.x = element_text(size=15),
+                           axis.text.y = element_text(size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      #xlab("엔진 배기량")+
+      ylab("Noise(dB)")
+    
+    
+####### 외형 관련
+    
+      ggplot(car_noise_complete,aes(model_seats_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+theme_bw()+
+        theme(axis.text.x = element_text(size=15),
+                           axis.text.y = element_text(size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+     # 좌석수에 대해서 확실히 2인승 스포츠카가 dB크다. 
+    
+    
+      ggplot(car_noise_complete,aes(model_doors_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+
+        theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+      # 차 문 적은 스포츠카가 dB 크다.
+      
+#### 외적요인
+      
+  ######~~~~ 작을수록 dB 높다 (스포츠카 영향)
+      ggplot(car_noise_complete,aes(model_weight_kg_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+  
+      ggplot(car_noise_complete,aes(model_height_mm_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+      
+      ggplot(car_noise_complete,aes(model_wheelbase_mm_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+      
+      ggplot(car_noise_complete,aes(model_width_mm_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+      
+      ggplot(car_noise_complete,aes(model_length_mm_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+########
+      ggplot(car_noise_complete,aes(model_lkm_city_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+
+      ggplot(car_noise_complete,aes(model_lkm_hwy_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+
+      ggplot(car_noise_complete,aes(model_lkm_mixed_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+
+      ggplot(car_noise_complete,aes(model_fuel_cap_l_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+
+      
+      
+#######ENGINE
+      
+      ggplot(car_noise_complete,aes(model_engine_cyl_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+
+      ggplot(car_noise_complete,aes(model_engine_valves_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+
+      ggplot(car_noise_complete,aes(model_engine_valves_per_cyl_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+
+      
+      ggplot(car_noise_complete,aes(model_engine_compression_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+
+      
+      ggplot(car_noise_complete,aes(model_engine_power_kw_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+
+      
+      ggplot(car_noise_complete,aes(model_engine_torque_kgm_cqa,dB_at_100kmh ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                           axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                         axis.title=element_text(size=15),
+                         legend.text = element_text(size = 15))+
+      ylab("Noise(dB)")
+
+```
+
+
+- 전체 categorical 변수의 영향 탐색 
+
+```{r}
+
+    ggplot(car_noise_complete,aes(model_body_cqa,dB_at_100kmh ))+ 
+          #geom_point()+geom_smooth(method = 'lm' )+
+            geom_boxplot()+
+            theme_bw()+
+            theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                               axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                             axis.title=element_text(size=15),
+                             legend.text = element_text(size = 15))+
+          ylab("Noise(dB)")
+          # 로스터 우뚝 
+    
+    ggplot(car_noise_complete,aes(model_drive_cqa,dB_at_100kmh ))+ 
+          #geom_point()+geom_smooth(method = 'lm' )+
+            geom_boxplot()+
+            theme_bw()+
+            theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                               axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                             axis.title=element_text(size=15),
+                             legend.text = element_text(size = 15))+
+          ylab("Noise(dB)")
+          
+    
+    ggplot(car_noise_complete,aes(model_transmission_type_cqa,dB_at_100kmh ))+ 
+          #geom_point()+geom_smooth(method = 'lm' )+
+            geom_boxplot()+
+            theme_bw()+
+            theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                               axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                             axis.title=element_text(size=15),
+                             legend.text = element_text(size = 15))+
+          ylab("Noise(dB)")
+          
+
+#######ENGINE
+    
+    ggplot(car_noise_complete,aes(model_engine_fuel_cqa,dB_at_100kmh ))+ 
+          #geom_point()+geom_smooth(method = 'lm' )+
+            geom_boxplot()+
+            theme_bw()+
+            theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                               axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                             axis.title=element_text(size=15),
+                             legend.text = element_text(size = 15))+
+          ylab("Noise(dB)")+xlab("연료")
+          
+    
+    ggplot(car_noise_complete,aes(model_engine_type_cqa,dB_at_100kmh ))+ 
+          #geom_point()+geom_smooth(method = 'lm' )+
+            geom_boxplot()+
+            theme_bw()+
+            theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                               axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                             axis.title=element_text(size=15),
+                             legend.text = element_text(size = 15))+
+          ylab("Noise(dB)")+xlab("엔진 타입")
+          
+    
+    ggplot(car_noise_complete,aes(model_engine_position_cqa,dB_at_100kmh ))+ 
+          #geom_point()+geom_smooth(method = 'lm' )+
+            geom_boxplot()+
+            theme_bw()+
+            theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+                               axis.text.y = element_text(angle=45,hjust = 1,size=15),
+                             axis.title=element_text(size=15),
+                             legend.text = element_text(size = 15))+
+          ylab("Noise(dB)")
+          
+
+```
+
+
+# ```{r}
+# # metric
+# fns <- funs(mean, .args = list(na.rm = TRUE))
+# 
+# # select columns having dB in teheir name, added brand
+# cols_to_select <- c('brand', colnames(df)[grepl('dB', colnames(df))])
+# 
+# data.frame(
+#   cbind(
+#     brand = df$brand, 
+#     df %>% select_if(is_integer), 
+#     df %>% select_if(is_numeric))) %>% 
+#   select(-year) %>% 
+#   group_by(brand) %>% 
+#   summarise_all(fns) %>% 
+#   select(cols_to_select) %>% as.data.frame() %>% 
+#   reshape2::melt(id = 'brand') %>% 
+#   filter(!is.na(brand)) %>% 
+#   ggplot(aes(x = brand, y = value)) + geom_line(group=1) + coord_flip() + 
+#   facet_wrap(~variable, ncol = 6) + 
+#   theme_fivethirtyeight(14) + ylim(0,100) + 
+#   geom_hline(yintercept=50, color='red',size=.25, alpha=.75) +
+#   labs(title = 'Noise level(dB) of several car brands vs. current speed', 
+#        subtitle = 'red line is a reference at 50dB')
+#        
+# ```
+# 
+# 
+# 
+# ### EDA - Reference2
+# 
+# ```{r}
+# my.list <- list()
+# cur_names <- c()
+# cnt <- 0
+# for(c in 1:nrow(cats_summary)){
+#     if(cats_summary$cardinality[c] < 50){
+#         cnt <- cnt + 1
+#         cur_names[cnt] <- cats_summary$features[c]
+#         my.cols <- c(as.character(cats_summary$features[c]), colnames(df)[grepl('dB', colnames(df))])
+#         #print(my.cols)
+#         my.list[[cnt]] <- df %>% 
+#             select(my.cols) %>% 
+#             reshape2::melt(id=my.cols[1]) %>% 
+#             na.omit() %>% 
+#             group_by_(my.cols[1], 'variable') %>% 
+#             summarise_all(fns) %>% 
+#             ggplot(aes_string(my.cols[1],'value')) + geom_line(group = 1) + coord_flip() + facet_wrap(~ variable, nrow = 1) + 
+#             geom_hline(yintercept=50, color='red',size=.25, alpha=.75) +
+#             labs(title = paste0('Noise level(dB) vs. current speed and ', cats_summary$features[c]), subtitle = 'red line is a reference at 50dB') + 
+#             theme_fivethirtyeight(12) + ylim(0,100)
+#     }
+# }
+# 
+# names(my.list) <- cur_names
+
+```
+

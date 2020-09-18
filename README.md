@@ -9,6 +9,9 @@
 - 캐글에 업로드되어있는 데이터를 분석하고 test할 때는 우리가 직접 낙서한 이미지가 어떤 범주에 해당되는지 예측하도록 해서 재밌었다.
 
 ### Car Noise 
+#### [9/10]
+- [1_handling](https://github.com/jeeyeonLIM/kaggle_study/blob/master/1_handling.Rmd)
+= [2_EDA](https://github.com/jeeyeonLIM/kaggle_study/blob/master/2_EDA.Rmd)
 - 차량 부품 및 기술 공부에서 모든 시간을 변수의 의미 찾고 정리하는 데 소요했다. 
 - 문제 정의와, 모델링을 위한 Y 기준 정의, NA값이 너무 많아서 처리하는 데 어려움을 겪었다.
 - Q. 이렇게 결측치가 너무 많은 경우 대체방법을 사용하기 애매한 부분이 있었다. 
@@ -17,5 +20,11 @@
   - 보통 30% ?? 이하일 때 대체 방법을 사용하는걸로 알고있다.
   
 - 이럴 때는 어떻게 분석을 진행해야하는 지 답답하다.
+
+#### [9/16]
+- [중간분석 결과](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW.html)
+- 피드백 
+
+
 
 

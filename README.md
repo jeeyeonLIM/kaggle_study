@@ -4,9 +4,6 @@
 | 2018.10.01 ~ 2018.10.28 | [Doodle Recognition](https://www.kaggle.com/c/quickdraw-doodle-recognition) | [낙서 분류하기](https://github.com/jeeyeonLIM/Graduate_Course/tree/master/Financial%20engineering/Kaggle_Doodle_Recognition_Challenge) | CNN 학습 | 
 | 2020.09.05 ~ 2020.09.09 | [Car Noise](https://www.kaggle.com/murtio/car-noise-specification) | [실내 소음에 영향 미치는 요인 탐색](https://github.com/jeeyeonLIM/kaggle_study/blob/master/1_handling.Rmd) |  |
 
-### Doodle Recognition
-- 금융공학 수업시간에 이미 끝난 competition 가지고 pilot으로 분석했다. 
-- 캐글에 업로드되어있는 데이터를 분석하고 test할 때는 우리가 직접 낙서한 이미지가 어떤 범주에 해당되는지 예측하도록 해서 재밌었다.
 
 ### Car Noise 
 #### [2020/09/10]
@@ -30,13 +27,31 @@
 #### [2020/09/18]
 - 자동차 출시년도와 종류에 따라서 소음 항목을 구분해 놓은 법령을 찾았고 살펴보니 가속주행소음, 배기소음, 경적소음에 대한 기준은 있으나, 모두 실외에서 측정되는 소음이고, 실내 내부에 대한 제한 법률은 없음. 외부 소음 기준을 실내에 적용하기에 어려움이 있다고 판단. 
 - [[별표 18의2] 제작차 소음(가속주행소음) 측정방법(제6조 관련)](http://www.law.go.kr/%ED%96%89%EC%A0%95%EA%B7%9C%EC%B9%99/%EC%A0%9C%EC%9E%91%EC%9E%90%EB%8F%99%EC%B0%A8%EC%8B%9C%ED%97%98%EA%B2%80%EC%82%AC%EB%B0%8F%EC%A0%88%EC%B0%A8%EC%97%90%EA%B4%80%ED%95%9C%EA%B7%9C%EC%A0%95) - 
-
 - 최종 목표 정해짐. 
-
 - 결측치 처리방법에 대해서 가장 합리적으로 정리해 놓은 블로그 발견 
   - https://nittaku.tistory.com/451
 
+- S/M/L 분류-> 조건에 해당하지 않는 차는 예측 
+- 그룹 비교 EDA, Modeling 진행 
 
+#### [2020/09/19]
+- S/M/L 분류한 것 각각 단변량 EDA
+- 이상치 Handling, Modeling 할때 고려해볼 만한 것 정리. 
+- optim, optimx 찾아봄.
+- 언제 다하죠 ?..ㅠ_ㅠ
+
+#### [2020/09/20]
+- categorical 변수 재범주화 
+- 각각 S/M/L 전처리, 모델링
+
+
+
+
+
+
+### Doodle Recognition
+- 금융공학 수업시간에 이미 끝난 competition 가지고 pilot으로 분석했다. 
+- 캐글에 업로드되어있는 데이터를 분석하고 test할 때는 우리가 직접 낙서한 이미지가 어떤 범주에 해당되는지 예측하도록 해서 재밌었다.
 
 
 

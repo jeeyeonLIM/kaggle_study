@@ -3,7 +3,7 @@
 | :---: |:---:|:---:|:---:|
 | 2018.10.01 ~ 2018.10.28 | [Doodle Recognition](https://www.kaggle.com/c/quickdraw-doodle-recognition) | [낙서 분류하기](https://github.com/jeeyeonLIM/Graduate_Course/tree/master/Financial%20engineering/Kaggle_Doodle_Recognition_Challenge) | CNN 학습 | 
 | 2020.09.05 ~ 2020.09.09 | [Car Noise](https://www.kaggle.com/murtio/car-noise-specification) | - 1차분석 : [Data Handling](https://github.com/jeeyeonLIM/kaggle_study/blob/master/1_handling.Rmd), [EDA](https://github.com/jeeyeonLIM/kaggle_study/blob/master/2_EDA.Rmd)  |  |
-| 2020.09.15 ~ 2020.09.24 |  | - 최종분석 : [Data Handling](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_1.Rmd), [Small](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_small.Rmd), [Medium](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_medium.Rmd), [Large](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_large.Rmd)  |  |
+| 2020.09.15 ~ 2020.09.24 | [Car Noise](https://www.kaggle.com/murtio/car-noise-specification) | - 최종분석 : [Data Handling](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_1.Rmd), [Small](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_small.Rmd), [Medium](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_medium.Rmd), [Large](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_large.Rmd)  |  |
 
 
 

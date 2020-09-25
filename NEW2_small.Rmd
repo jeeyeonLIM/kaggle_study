@@ -16,18 +16,18 @@ eda_small= car_noise_complete %>%filter(type_num_final==1)
 
 
 ### Categorical Visualization Function 
-categorical_each = function(data, var, my_title=''){
+categorical_each = function(data, var, title_name){
   gd=data.frame(dB = data$dB_at_100kmh, var)
   g=ggplot( gd, aes(x=reorder(var ,-dB),y=dB)) + 
     geom_boxplot()+
     theme_bw()+
     theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)) +
-    labs(title = my_title, x = NULL, fill = "type")
+    labs(title = title_name, x = NULL, fill = "type")
   print(g)
 }
 
 ### Numerical Visualization Function 
-numeric_each = function(data, var, my_title=''){
+numeric_each = function(data, var, title_name){
   gd=data.frame(dB = data$dB_at_100kmh, var)
   g=ggplot(gd,aes(var,dB ))+ 
       geom_point()+geom_smooth(method = 'lm' )+
@@ -36,7 +36,7 @@ numeric_each = function(data, var, my_title=''){
         #axis.text.y = element_text(angle=45,hjust = 1,size=15),
          axis.title=element_text(size=15),
          legend.text = element_text(size = 15))+
-    labs(title = my_title, x = NULL, fill = "type")
+    labs(title = title_name, x = NULL, fill = "type")
   print(g)
 }
   

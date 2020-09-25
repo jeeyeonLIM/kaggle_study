@@ -1,0 +1,1219 @@
+---
+title: "Car Noise Data Analysis"
+author: "jeeyeonLIM"
+output: 
+  html_document :
+    toc : true
+---
+
+# SMALL 
+# 1.EDA
+
+```{r}
+
+eda_small= car_noise_complete %>%filter(type_num_final==1) 
+
+
+
+### Categorical Visualization Function 
+categorical_each = function(data, var, my_title=''){
+  gd=data.frame(dB = data$dB_at_100kmh, var)
+  g=ggplot( gd, aes(x=reorder(var ,-dB),y=dB)) + 
+    geom_boxplot()+
+    theme_bw()+
+    theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)) +
+    labs(title = my_title, x = NULL, fill = "type")
+  print(g)
+}
+
+### Numerical Visualization Function 
+numeric_each = function(data, var, my_title=''){
+  gd=data.frame(dB = data$dB_at_100kmh, var)
+  g=ggplot(gd,aes(var,dB ))+ 
+      geom_point()+geom_smooth(method = 'lm' )+
+        theme_bw()+
+    theme(axis.text.x = element_text(angle=45,hjust = 1,size=15),
+        #axis.text.y = element_text(angle=45,hjust = 1,size=15),
+         axis.title=element_text(size=15),
+         legend.text = element_text(size = 15))+
+    labs(title = my_title, x = NULL, fill = "type")
+  print(g)
+}
+  
+graph_tada=function(input_data){
+  ### Categorical
+      categorical_each(input_data,input_data$model_engine_fuel_cqa,"model_engine_fuel_cqa") 
+      categorical_each(input_data,input_data$model_body_cqa,"model_body_cqa") 
+      categorical_each(input_data,input_data$brand,"brand")
+      categorical_each(input_data,input_data$model_engine_position_cqa,"model_engine_position_cqa") 
+      categorical_each(input_data,input_data$model_engine_type_cqa,"model_engine_type_cqa") 
+      categorical_each(input_data,input_data$model_engine_compression_cqa,"model_engine_compression_cqa") 
+      categorical_each(input_data,input_data$model_drive_cqa,"model_drive_cqa") 
+      categorical_each(input_data,input_data$model_transmission_type_cqa,"model_transmission_type_cqa") 
+      categorical_each(input_data,input_data$make_country_cqa,"make_country_cqa")
+  ### Numeric 
+      numeric_each(input_data, input_data$model_engine_cc_cqa,"model_engine_cc_cqa")
+      numeric_each(input_data, input_data$model_engine_cyl_cqa,"model_engine_cyl_cqa")
+      numeric_each(input_data, input_data$model_engine_valves_per_cyl_cqa,"model_engine_valves_per_cyl_cqa")
+      numeric_each(input_data, input_data$model_engine_bore_mm_cqa,"model_engine_bore_mm_cqa")
+      numeric_each(input_data, input_data$model_engine_stroke_mm_cqa,"model_engine_stroke_mm_cqa")
+      numeric_each(input_data, input_data$model_top_speed_kph_cqa,"model_top_speed_kph_cqa")
+      numeric_each(input_data, input_data$model_0_to_100_kph_cqa,"model_0_to_100_kph_cqa")
+      numeric_each(input_data, input_data$model_seats_cqa,"model_seats_cqa")
+      numeric_each(input_data, input_data$model_doors_cqa,"model_doors_cqa")
+      numeric_each(input_data, input_data$model_weight_kg_cqa,"model_weight_kg_cqa")
+      numeric_each(input_data, input_data$model_width_mm_cqa,"model_width_mm_cqa")
+      numeric_each(input_data, input_data$model_height_mm_cqa,"model_height_mm_cqa")
+      numeric_each(input_data, input_data$model_wheelbase_mm_cqa,"model_wheelbase_mm_cqa")
+      numeric_each(input_data, input_data$model_lkm_hwy_cqa,"model_lkm_hwy_cqa")
+      numeric_each(input_data, input_data$model_lkm_mixed_cqa,"model_lkm_mixed_cqa")
+      numeric_each(input_data, input_data$model_lkm_city_cqa,"model_lkm_city_cqa")
+      
+      numeric_each(input_data, input_data$model_fuel_cap_l_cqa,"model_fuel_cap_l_cqa")
+      numeric_each(input_data, input_data$model_sold_in_us_cqa,"model_sold_in_us_cqa")
+      numeric_each(input_data, input_data$model_engine_bore_in_cqa,"model_engine_bore_in_cqa")
+      numeric_each(input_data, input_data$model_engine_stroke_in_cqa,"model_engine_stroke_in_cqa")
+      numeric_each(input_data, input_data$model_engine_valves_cqa,"model_engine_valves_cqa")
+      numeric_each(input_data, input_data$model_engine_power_kw_cqa,"model_engine_power_kw_cqa")
+      numeric_each(input_data, input_data$model_engine_torque_kgm_cqa,"model_engine_torque_kgm_cqa")
+      numeric_each(input_data, input_data$model_top_speed_mph_cqa,"model_top_speed_mph_cqa")
+}
+graph_tada(input_data=eda_small)
+
+```
+
+
+
+
+
+# 2. Modeling
+
+```{r}
+
+summary(model_small)
+
+### 결측값 check 
+
+    showNA(model_small, "small dataframe")
+    # showNA(medium, "medium dataframe")
+    # showNA(large, "large dataframe")
+    
+    
+### 연속형 변수 확인
+    corr_model_small= model_small %>% select_if(is.numeric) 
+    library(corrplot)
+    M <- cor(corr_model_small, use= "complete.obs")
+    corrplot(M, method = "circle")
+    
+
+
+### 범주형 변수 Handling 
+    
+    # 변수명 확인 
+    model_small %>% select_if(is.factor) %>% colnames()
+    
+    # 범주별 갯수 살펴보기
+    input_data = model_small
+        # table(input_data$brand )
+        # table(input_data$model )
+        # table(input_data$model_engine_compression_cqa )
+    
+        table(input_data$model_engine_position_cqa ) # [제외] Rear 4개 이외에 전부 Front 형태.
+        table(input_data$model_engine_type_cqa )     # [제외] boxer 1개 이외에 전부 in-line 형태.
+        table(input_data$model_transmission_type_cqa)# Automated Manual제외 
+        table(input_data$model_engine_fuel_cqa )
+        table(input_data$model_drive_cqa )           # Front Wheel Driv 이외 범주화
+          # All Wheel Drive Four Wheel Drive Front Wheel Driv Rear Wheel Drive 
+          #       10                2              182                4 
+      
+      #### 아래거 이것저것 시도해보기 .... 
+        table(input_data$model_body_cqa ) 
+        table(input_data$make_country_cqa )
+        
+### Hanling 
+    model_small= model_df %>%filter(type_num_final==1) %>% select(-type_num_final)
+    
+    model_small = model_small %>% 
+      filter(model_transmission_type_cqa %in% c("Automatic","Manual",NA), #범주불균형-> 모형적합X
+             !is.na(model_engine_fuel_cqa), # level 1개여서 제외함
+             model_engine_cc_cqa>0 # 0값을 갖는 row의 결측값이 대부분이여서 제외함.
+             ) %>% 
+      mutate(model_drive_cqa = as.factor(ifelse(model_drive_cqa=="Front Wheel Driv",
+                                                "Front Wheel Driv", "etc")),
+             make_country_cqa =as.factor(
+                               ifelse(make_country_cqa == "France","France",
+                               ifelse(make_country_cqa == "Germany","Germany",
+                               ifelse(make_country_cqa == "Italy","Italy",
+                               ifelse(make_country_cqa == "Japan","Japan","etc")))))
+                               #ifelse(make_country_cqa == "South Korea","South Korea","etc")))))
+             )%>%  
+      select(-year,
+             -model_engine_type_cqa,      # boxer 1개 이외에 전부 in-line 형태.
+             -model_engine_position_cqa,  # Rear 4개 이외에 전부 Front 형태
+            #범주불균형-> 모형적합X
+             -model_body_cqa,
+            #-make_country_cqa,
+             #-model_transmission_type_cqa,
+             #-model_drive_cqa,
+            
+            # VIF 
+            # 아래에서 상관계수 때문에 어떤 변수가 더 좋을지 살펴봄. -> AIC 기준으로 
+            # 따라서 model_engine_valves_per_cyl_cqa 제외하는 게 맞다고 판단. 
+             -model_engine_valves_per_cyl_cqa, # AIC: 387.74 ,rmse 9.411235 
+             #-model_engine_cyl_cqa,-model_engine_valves_cqa # AIC: 390.71 , rmse 9.570973
+             
+            -model_engine_fuel_cqa # vif > 16
+            ,-model_length_mm_cqa
+             ) 
+
+### all~Modeling -> ViF check 
+    summary(model_small) # data check
+    model_small = model_small %>% select(-X)
+                                        # ,-model_engine_fuel_cqa)
+    glm_fit=  glm(dB_at_100kmh~ .,data=model_small)
+    summary(glm_fit)
+    
+    library(car)
+    vif(glm_fit) # vif 10인 값 model_length_mm_cqa 있긴 하지만 일단 모형에 넣어주기로 
+
+
+    
+```
+
+```{r}
+
+    
+    showNA(model_small, "small dataframe")
+    str(model_small)
+        
+```
+
+    
+```{r}
+
+## Random Forest 
+library(randomForest)
+
+## 단순 평균 대체 - randomForest na.action option 
+small_rf_fit=randomForest(dB_at_100kmh~ .,
+                          data=model_small,
+                          na.action=na.roughfix, 
+                          mtry=13, importance = TRUE)
+summary(small_rf_fit)
+
+
+
+
+
+## method1. mice 
+require(mice) 
+imp_cart <- mice(model_small,5, method = "cart")     # dataset을 m개 만든다. 디폴트는 5 
+imp_rf <- mice(model_small,5, method = "rf")
+
+### cart
+    imp_cart
+    imp_cart$imp
+    densityplot(imp_cart)
+    
+    mice_cart = complete(imp_cart)
+    mice_cart_num= mice_cart %>% select_if(is.numeric)
+    #mice_cart_num=scale(mice_cart_num)
+    mice_cart = mice_cart %>% select_if(is.factor) %>% cbind(mice_cart_num)
+
+
+### rf 
+    imp_rf
+    imp_rf$imp
+    densityplot(imp_rf)
+    
+    mice_rf = complete(imp_rf)
+    mice_rf_num= mice_rf %>% select_if(is.numeric)
+    #mice_rf_num=scale(mice_rf_num)
+    mice_rf = mice_rf %>% select_if(is.factor) %>% cbind(mice_rf_num)
+    
+
+
+### Train vs Test 
+# 나눌 데이터 ##################
+  #model_data= mice_cart
+  model_data= mice_rf
+    
+###################################
+    set.seed(1)
+    small_idx=sample(1:nrow(model_data), nrow(model_data)*0.7)
+    mice_model_small_train=model_data[small_idx,]
+    mice_model_small_test=model_data[-small_idx,]
+    
+    summary(mice_model_small_train)
+    summary(mice_model_small_test)
+    
+
+### fitting 
+# 적합할 데이터 ##################
+  train= mice_model_small_train
+  test=  mice_model_small_test
+###################################
+    
+#### glm #########################
+    fit_glm= glm(dB_at_100kmh~ .,data=train)
+    ss= summary(fit_glm)
+    #predict(fit_glm, test )
+    
+    rmse_glm= sqrt( mean((predict(fit_glm, test )-test$dB_at_100kmh)^2) )
+    rmse_glm
+    
+    plot( predict(fit_glm, test ),test$dB_at_100kmh )
+    
+    fit.con <- lm(dB_at_100kmh~1,data = train)
+    fit.both <- step(fit.con,scope=list(lower=fit.con,upper=fit_glm),direction = "both")
+    rmse_glm_tune= sqrt( mean((predict(fit.both, test )-test$dB_at_100kmh)^2) )
+    rmse_glm_tune
+
+
+  ### tuning X 
+    # default_glm_mod = train(
+    #       form = dB_at_100kmh ~ .,
+    #       data = train,
+    #       trControl = trainControl(method = "cv", number = 5),
+    #       method = "glm"
+    #       )
+    # 
+    # fit_glm_tune = default_glm_mod$finalModel
+    # rmse_glm_tune= sqrt( mean((predict(fit_glm_tune, test )-test$dB_at_100kmh)^2) )
+    # rmse_glm_tune
+    
+    
+#### rf#########################
+    fit_rf=randomForest(dB_at_100kmh~ .,
+                              data=train)
+    #predict(fit_rf)
+    rmse_rf= sqrt( mean((predict(fit_rf, test )-test$dB_at_100kmh)^2) )
+    rmse_rf
+    
+    plot( predict(fit_rf, test ),test$dB_at_100kmh )
+    
+    
+    
+    ### tuning
+    hyper_grid <- expand.grid(
+      mtry       = seq(2, 7, by = 1),
+      node_size  = seq(1, 15, by = 2),
+      sampe_size = c(.55, .632, .70, .80),
+      OOB_RMSE   = 0
+    )
+    dim(hyper_grid)
+    
+    for(i in 1:nrow(hyper_grid)) {
+      # train model
+      model <- ranger(
+        formula         = dB_at_100kmh ~ ., 
+        data            = train, 
+        num.trees       = 500,
+        mtry            = hyper_grid$mtry[i],
+        min.node.size   = hyper_grid$node_size[i],
+        sample.fraction = hyper_grid$sampe_size[i],
+        seed            = 5
+      )
+      
+      # add OOB error to grid
+      hyper_grid$OOB_RMSE[i] <- model$prediction.error #오분류율
+      print(i)
+    }
+    data.frame(hyper_grid) %>% filter(OOB_RMSE == min(hyper_grid$OOB_RMSE))
+    
+    fit_rf_tune=randomForest(dB_at_100kmh~ .,data=train,
+                           ntree=500,mtry=2,nodesize=5,sample_size=0.7,
+                           importance=T,eta=0.11)
+                              
+    #predict(fit_rf)
+    rmse_rf_tune= sqrt( mean((predict(fit_rf_tune, test )-test$dB_at_100kmh)^2) )
+    rmse_rf_tune
+    
+    
+       
+
+    
+    ### Importance Plot 
+    varImpPlot(fit_rf_tune)
+    model_wheelbase_mm_cqa = partialPlot(fit_rf_tune, 
+                                          pred.data=train,
+                                          x.var="model_wheelbase_mm_cqa")
+    engine_power = partialPlot(fit_rf_tune, 
+                                          pred.data=train,
+                                          x.var="model_fuel_cap_l_cqa")
+    
+    
+#### svr#########################
+    library(e1071) 
+    fit_svr <- svm(dB_at_100kmh~ .,
+                              data=train, gamma=1, cost=16)
+    summary(fit_svr)
+    rmse_svr= sqrt( mean((predict(fit_svr, test )-test$dB_at_100kmh)^2) )
+    rmse_svr
+    
+    plot( predict(fit_svr, test ),test$dB_at_100kmh )
+
+    
+    ### tuning
+    tuneResult <- tune(svm, dB_at_100kmh ~ ., data = train,
+                        ranges = list(epsilon = seq(0,1,0.1), cost = 2^(2:9)))
+    print(tuneResult) # epsilon0.7   cost 4
+    plot(tuneResult)
+    fit_svr_tune <- tuneResult$best.model
+    
+    rmse_svr_tune= sqrt( mean((predict(fit_svr_tune, test )-test$dB_at_100kmh)^2) )
+    rmse_svr_tune
+    
+    
+    
+#### xgboost#########################
+    library(xgboost)
+    X.train <- model.matrix(dB_at_100kmh ~ . -1, train) 
+    X.test <- model.matrix(dB_at_100kmh ~ . -1, test)
+    train.xgb <- xgb.DMatrix(X.train, label=train$dB_at_100kmh)
+    test.xgb <- xgb.DMatrix(X.test, label=test$dB_at_100kmh)
+    
+    watchlist <- list(train=train.xgb, test=test.xgb)
+    
+    xgb <- xgb.train(data=train.xgb, label=train$dB_at_100kmh, 
+                     max_depth = 1000, eta = 0.1, nthread = 3,nrounds = 100, #1.776072
+                     
+                     watchlist=watchlist)
+    
+    xgb.pred.train = predict(xgb, train.xgb)
+    xgb.pred.test = predict(xgb, test.xgb)
+    
+    rmse_xgb= sqrt( mean((xgb.pred.test-test$dB_at_100kmh)^2) )
+    rmse_xgb 
+    
+    
+    ### tuning
+    hyper_grid <- expand.grid(
+      
+      # eta       = seq(0.1, 0.3, by = 0.1),
+      # nthread  = seq(3, 6, by = 1),
+      # 
+      # nrounds = seq(52, 53, by = 2), 
+      # OOB_RMSE   = 0
+      
+      eta       = seq(0.1, 0.7, by = 0.1),
+      nthread  = seq(3, 6, by = 1),
+      
+      nrounds = seq(50, 55, by = 1), 
+      OOB_RMSE   = 0
+      
+    )
+    
+    
+    for(i in 1:nrow(hyper_grid)) {
+      # train model
+      model <- xgb.train(data=train.xgb, 
+                         label=train$dB_at_100kmh, 
+                         max_depth = 1000, 
+                         eta = hyper_grid$eta[i], 
+                         nthread = hyper_grid$nthread[i], 
+                         nrounds = hyper_grid$nrounds[i]#, 
+                         
+                         #watchlist=watchlist
+                         )
+    
+      # add OOB error to grid
+      hyper_grid$OOB_RMSE[i] <- sqrt( mean((predict(model, test.xgb)-test$dB_at_100kmh)^2) )
+      print(i)
+    }
+    
+    data.frame(hyper_grid) %>% filter(OOB_RMSE == min(hyper_grid$OOB_RMSE))
+    
+    ### FINAL...ㅠㅠ 
+    
+    ## cart
+    # xgb <- xgb.train(data=train.xgb, label=train$dB_at_100kmh, 
+    #                  max_depth = 1000, eta =  0.2, nthread = 3,nrounds = 50, #1.776072
+    #                  watchlist=watchlist)
+    
+    ##rf
+    xgb <- xgb.train(data=train.xgb, label=train$dB_at_100kmh, 
+                     max_depth = 1000, eta = 0.2, nthread = 3,nrounds = 50, #1.776072
+                     watchlist=watchlist)
+    
+    xgb.pred.train = predict(xgb, train.xgb)
+    xgb.pred.test = predict(xgb, test.xgb)
+    
+    rmse_xgb_tune= sqrt( mean((xgb.pred.test-test$dB_at_100kmh)^2) )
+    rmse_xgb_tune
+    
+    
+    ### Importance Plot 
+    mat <- xgb.importance (model = xgb)
+    xgb.plot.importance (importance_matrix = mat) 
+        
+    
+### RESULT #########################
+    
+    data.frame(rmse_glm = rmse_glm, 
+               rmse_rf= rmse_rf,
+               rmse_rf_tune= rmse_rf_tune,
+               rmse_svr= rmse_svr,
+               rmse_svr_tune= rmse_svr_tune,
+               rmse_xgb= rmse_xgb,
+               rmse_xgb_tune= rmse_xgb_tune)
+    
+    ppt_final = 
+      data.frame(rmse_glm = round(rmse_glm,4), 
+               rmse_rf_tune= round(rmse_rf_tune,4),
+               rmse_svr_tune= round(rmse_svr_tune,4),
+               rmse_xgb_tune= round(rmse_xgb_tune,4))
+    ppt_final
+    
+    
+    
+    
+######### 
+    final_model=
+    data.frame(
+        pred_y = predict(fit_rf_tune, test ),
+        real_y = test$dB_at_100kmh
+        )  
+    ggplot(final_model, aes(pred_y, real_y)) +
+          geom_point() + 
+          stat_smooth(method = lm) + theme_bw()
+        # 3. Add prediction intervals
+
+```
+
+
+# 3.최적값 찾기
+
+########## 시이작 
+
+```{r}
+
+## method1. mice 
+require(mice) 
+imp_cart <- mice(model_small,5, method = "cart")     # dataset을 m개 만든다. 디폴트는 5 
+imp_rf <- mice(model_small,5, method = "rf")
+
+### cart
+    imp_cart
+    imp_cart$imp
+    densityplot(imp_cart)
+    
+    mice_cart = complete(imp_cart)
+    mice_cart_num= mice_cart %>% select_if(is.numeric)
+    #mice_cart_num=scale(mice_cart_num)
+    mice_cart = mice_cart %>% select_if(is.factor) %>% cbind(mice_cart_num)
+
+
+### rf 
+    imp_rf
+    imp_rf$imp
+    densityplot(imp_rf)
+    
+    mice_rf = complete(imp_rf)
+    mice_rf_num= mice_rf %>% select_if(is.numeric)
+    #mice_rf_num=scale(mice_rf_num)
+    mice_rf = mice_rf %>% select_if(is.factor) %>% cbind(mice_rf_num)
+    
+
+
+### Train vs Test 
+# 나눌 데이터 ##################
+  #model_data= mice_cart
+  model_data= mice_rf
+    
+###################################
+    set.seed(1)
+    small_idx=sample(1:nrow(model_data), nrow(model_data)*0.7)
+    mice_model_small_train=model_data[small_idx,]
+    mice_model_small_test=model_data[-small_idx,]
+    
+    summary(mice_model_small_train)
+    summary(mice_model_small_test)
+    
+
+### fitting 
+# 적합할 데이터 ##################
+  train= mice_model_small_train
+  test=  mice_model_small_test
+###################################
+  
+  
+    final_model=randomForest(dB_at_100kmh~ .,data=train,
+                           ntree=500,mtry=2,nodesize=5,sample_size=0.7,
+                           importance=T,eta=0.11)
+                              
+    #predict(fit_rf)
+    rmse_rf_tune= sqrt( mean((predict(fit_rf_tune, test )-test$dB_at_100kmh)^2) )
+    rmse_rf_tune
+
+    
+###################################
+    
+    dim(model_data)
+    colnames(model_data)
+    
+    hyper_grid <- expand.grid(
+      model_drive_cqa 
+        #=as.factor("Front Wheel Driv"), # 
+        =c("etc", "Front Wheel Driv"),
+      model_transmission_type_cqa 
+        #=as.factor("Manual"),  
+        = c("Automatic","Manual"),
+      make_country_cqa 
+        #= as.factor("Japan"), 
+        = c("France", "Germany","etc","Italy","Japan"),
+      
+      model_engine_cc_cqa=
+        seq(min(model_data$model_engine_cc_cqa), max(model_data$model_engine_cc_cqa), length.out = 2),
+      model_engine_cyl_cqa =as.integer(seq(3,4,length.out = 2)),
+      model_seats_cqa =as.integer(seq(2,5,1)),
+      model_doors_cqa =as.integer(seq(2,5,1)),
+      model_weight_kg_cqa =
+        seq(min(model_data$model_weight_kg_cqa), max(model_data$model_weight_kg_cqa), length.out = 2),
+      model_width_mm_cqa =
+        seq(min(model_data$model_width_mm_cqa), max(model_data$model_width_mm_cqa), length.out = 2),
+      model_height_mm_cqa=
+        seq(min(model_data$model_height_mm_cqa), max(model_data$model_height_mm_cqa), length.out = 2),
+      model_wheelbase_mm_cqa =seq(min(model_data$model_wheelbase_mm_cqa), max(model_data$model_wheelbase_mm_cqa), length.out = 2),
+      model_lkm_mixed_cqa =
+        seq(min(model_data$model_lkm_mixed_cqa), max(model_data$model_lkm_mixed_cqa), length.out = 2),
+      model_fuel_cap_l_cqa =
+        seq(min(model_data$model_fuel_cap_l_cqa), max(model_data$model_fuel_cap_l_cqa), length.out = 2),
+      model_engine_valves_cqa =
+        seq(min(model_data$model_engine_valves_cqa), max(model_data$model_engine_valves_cqa), length.out = 2),
+      model_engine_power_kw_cqa=
+        seq(min(model_data$model_engine_power_kw_cqa), max(model_data$model_engine_power_kw_cqa), length.out = 2),
+      model_engine_torque_kgm_cqa=
+        seq(min(model_data$model_engine_torque_kgm_cqa), max(model_data$model_engine_torque_kgm_cqa), length.out = 2),
+      dB_at_100kmh=0
+    )
+    dim(hyper_grid)
+    hyper_grid
+    
+    
+    model <- randomForest(dB_at_100kmh~ .,data=model_data,
+                           ntree=500,mtry=2,nodesize=5,sample_size=0.7,
+                           importance=T,eta=0.11)
+    
+    for(i in 1:nrow(hyper_grid)) {
+      hyper_grid$y[i] <- predict(model,hyper_grid[i,])
+      print(i)
+    }
+    
+    data.frame(hyper_grid) %>% filter(y == min(hyper_grid$y))
+    
+    
+    
+    
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+ss$coefficients[,1]
+
+a=data.frame(ss$coefficients[,1])
+View(a)
+#write.csv(a,"sssmall.csv")
+
+# model_engine_cc_cqa
+# model_engine_cyl_cqa
+# model_drive_cqaFront Wheel Driv
+# model_transmission_type_cqaManual
+# model_seats_cqa
+# model_doors_cqa
+# model_weight_kg_cqa
+# model_width_mm_cqa
+# model_height_mm_cqa
+# model_wheelbase_mm_cqa
+# model_lkm_mixed_cqa
+# model_fuel_cap_l_cqa
+# model_engine_valves_cqa
+# model_engine_power_kw_cqa
+# model_engine_torque_kgm_cqa
+# make_country_cqaFrance
+# make_country_cqaGermany
+# make_country_cqaItaly
+# make_country_cqaJapan
+
+
+###### 시작 ~!
+
+# 목적식
+z <- c(-0.000100417	,
+      0.027265117	,
+      # 0.268959259	,
+      # 1.411157819	,
+      -1.312549275	,
+      0.266884113	,
+      -0.001256687	,
+      0.003792502	,
+      -0.000163293	,
+      -6.45573E-05	,
+      0.290839504	,
+      -0.138351153	,
+      -0.054641537	,
+      -0.054305642	,
+      0.15127566	
+      # 0.992208792	,
+      # -0.070179054	,
+      # -0.398303846	,
+      # 1.332771394	
+      )
+
+
+A <- matrix(c(1,0,0,0,0,0,0,0,0,0,0,0,0,
+              1,0,0,0,0,0,0,0,0,0,0,0,0,
+              0,1,0,0,0,0,0,0,0,0,0,0,0,
+              0,1,0,0,0,0,0,0,0,0,0,0,0,
+              0,0,1,0,0,0,0,0,0,0,0,0,0,
+              0,0,1,0,0,0,0,0,0,0,0,0,0,
+              0,0,0,1,0,0,0,0,0,0,0,0,0,
+              0,0,0,1,0,0,0,0,0,0,0,0,0,
+              0,0,0,0,1,0,0,0,0,0,0,0,0,
+              0,0,0,0,1,0,0,0,0,0,0,0,0,
+              0,0,0,0,0,1,0,0,0,0,0,0,0,
+              0,0,0,0,0,1,0,0,0,0,0,0,0,
+              0,0,0,0,0,0,1,0,0,0,0,0,0,
+              0,0,0,0,0,0,1,0,0,0,0,0,0,
+              0,0,0,0,0,0,0,1,0,0,0,0,0,
+              0,0,0,0,0,0,0,1,0,0,0,0,0,
+              0,0,0,0,0,0,0,0,1,0,0,0,0,
+              0,0,0,0,0,0,0,0,1,0,0,0,0,
+              0,0,0,0,0,0,0,0,0,1,0,0,0,
+              0,0,0,0,0,0,0,0,0,1,0,0,0,
+              0,0,0,0,0,0,0,0,0,0,1,0,0,
+              0,0,0,0,0,0,0,0,0,0,1,0,0,
+              0,0,0,0,0,0,0,0,0,0,0,1,0,
+              0,0,0,0,0,0,0,0,0,0,0,1,0,
+              0,0,0,0,0,0,0,0,0,0,0,0,1,
+              0,0,0,0,0,0,0,0,0,0,0,0,1), 
+            nrow=26, byrow=TRUE)
+
+# 제약식의 우변
+B <- c(min(model_small[,2],na.rm=T),max(model_small[,2],na.rm=T), 
+       min(model_small[,3],na.rm=T),max(model_small[,3],na.rm=T), 
+       min(model_small[,6],na.rm=T),max(model_small[,6],na.rm=T), 
+       min(model_small[,7],na.rm=T),max(model_small[,7],na.rm=T), 
+       min(model_small[,8],na.rm=T),max(model_small[,8],na.rm=T), 
+       min(model_small[,9],na.rm=T),max(model_small[,9],na.rm=T), 
+       min(model_small[,10],na.rm=T),max(model_small[,10],na.rm=T), 
+       min(model_small[,11],na.rm=T),max(model_small[,11],na.rm=T), 
+       min(model_small[,12],na.rm=T),max(model_small[,12],na.rm=T), 
+       min(model_small[,13],na.rm=T),max(model_small[,13],na.rm=T), 
+       min(model_small[,14],na.rm=T),max(model_small[,14],na.rm=T), 
+       min(model_small[,15],na.rm=T),max(model_small[,15],na.rm=T), 
+       min(model_small[,16],na.rm=T),max(model_small[,16],na.rm=T)
+       )
+
+# 제약식의 부등호
+dir  <- c(">", "<=", 
+          ">", "<=", 
+          ">", "<=", 
+          ">", "<=", 
+          ">", "<=", 
+          ">", "<=", 
+          ">", "<=", 
+          ">", "<=", 
+          ">", "<=", 
+          ">", "<=", 
+          ">", "<=", 
+          ">", "<=", 
+          ">", "<=")
+
+# 최적해
+opt <-  lp(direction="min",
+           objective.in = z,
+           const.mat = A,
+           const.dir = dir,
+           const.rhs = B,
+           all.int = T)
+
+# 결과
+opt
+
+# 결정변수
+opt$solution
+
+# 가장 가까운 값을 가지는 차량 찾기 
+### Manual이 가장 많았기 떄문에 매뉴얼은 고정 
+### Japan 차 중에 찾아보기로
+
+  ## 값 setting
+    model_drive_cqaFront_Wheel_Driv=1
+    model_transmission_type_cqaManual=1
+
+    make_country_cqaFrance   =0
+    make_country_cqaGermany  =0
+    make_country_cqaItaly    =0
+    make_country_cqaJapan    =1
+
+  ## 계산 
+    y= ss$coefficients[,1][1] +
+      (ss$coefficients[,1][2] *opt$solution[1] )+
+      (ss$coefficients[,1][3] *opt$solution[2] )+
+      
+      (ss$coefficients[,1][4] *model_drive_cqaFront_Wheel_Driv )+ 
+      (ss$coefficients[,1][5] *model_transmission_type_cqaManual)+
+      
+      (ss$coefficients[,1][6] *opt$solution[3] )+
+      (ss$coefficients[,1][7] *opt$solution[4] )+
+      (ss$coefficients[,1][8] *opt$solution[5] )+
+      (ss$coefficients[,1][9] *opt$solution[6] )+
+      (ss$coefficients[,1][10] *opt$solution[7] )+
+      (ss$coefficients[,1][11] *opt$solution[8] )+
+      (ss$coefficients[,1][12] *opt$solution[9] )+
+      (ss$coefficients[,1][13] *opt$solution[10] )+
+      (ss$coefficients[,1][14] *opt$solution[11] )+
+      (ss$coefficients[,1][15] *opt$solution[12] )+
+      (ss$coefficients[,1][16] *opt$solution[13] )+
+      
+      (ss$coefficients[,1][17] *make_country_cqaFrance )+
+      (ss$coefficients[,1][18] *make_country_cqaGermany )+
+      (ss$coefficients[,1][19] *make_country_cqaItaly )+
+      (ss$coefficients[,1][20] *make_country_cqaJapan )
+      
+    print(y)
+    
+    
+    Japan=model_small %>%
+      filter( make_country_cqa == "Japan") %>% 
+      
+      mutate( dist=
+        (model_engine_cc_cqa -opt$solution[1])^2+
+        (model_engine_cyl_cqa -opt$solution[2])^2+
+        (model_seats_cqa -opt$solution[3])^2+
+        (model_doors_cqa -opt$solution[4])^2+
+        (model_weight_kg_cqa -opt$solution[5])^2+
+        (model_width_mm_cqa-opt$solution[6])^2+
+        (model_height_mm_cqa-opt$solution[7])^2+
+        (model_wheelbase_mm_cqa-opt$solution[8])^2+
+        (model_lkm_mixed_cqa-opt$solution[9])^2+
+        (model_fuel_cap_l_cqa-opt$solution[10])^2+
+        (model_engine_valves_cqa-opt$solution[11])^2+
+        (model_engine_power_kw_cqa-opt$solution[12])^2+
+        (model_engine_torque_kgm_cqa-opt$solution[13])^2
+        
+        ) %>% 
+      filter(model_drive_cqa =="Front Wheel Driv",
+             model_transmission_type_cqa=="Manual") %>% 
+      arrange(dist)
+    View(Japan)
+    
+    car_noise_complete %>% filter(type_num_final ==1,
+                                  dB_at_100kmh==66.7,
+                                  model_engine_cc_cqa==1497,
+                                  model_engine_cyl_cqa==4
+                                  ) 
+    
+    # 1679 Toyota Prius  1.8 2009 
+    
+    
+    
+```
+
+
+
+
+```{r}
+
+ss$coefficients[,1]
+
+# model_engine_cc_cqa                    
+# model_engine_cyl_cqa                
+# model_engine_valves_per_cyl_cqa   
+# 
+# model_engine_fuel_cqaElectric           
+# model_engine_fuel_cqaGasoline 
+# model_engine_fuel_cqaGasoline - Premium 
+# 
+# model_seats_cqa 
+# model_doors_cqa 
+# 
+# model_weight_kg_cqa                     
+# model_length_mm_cqa                      
+# model_width_mm_cqa 
+# model_height_mm_cqa
+# model_wheelbase_mm_cqa
+# 
+# model_lkm_mixed_cqa 
+# model_fuel_cap_l_cqa
+# model_engine_valves_cqa 
+# model_engine_power_kw_cqa 
+# model_engine_torque_kgm_cqa 
+
+
+##### Example
+
+# model_engine_cc_cqa =1150
+# model_engine_cyl_cqa =4
+# model_engine_valves_per_cyl_cqa= 2 
+# 
+# model_engine_fuel_cqaElectric =0
+# model_engine_fuel_cqaGasoline =0
+# model_engine_fuel_cqaGasoline_Premium = 1
+# 
+# model_seats_cqa =5
+# model_doors_cqa =4
+# 
+# model_weight_kg_cqa=1075
+# model_length_mm_cqa=4320
+# model_width_mm_cqa=1720
+# model_height_mm_cqa=1510
+# model_wheelbase_mm_cqa=2490
+# 
+# model_lkm_mixed_cqa=6.4
+# model_fuel_cap_l_cqa=45
+# model_engine_valves_cqa=8
+# model_engine_power_kw_cqa=53
+# model_engine_torque_kgm_cqa=11
+# 
+# 
+# y= 102.1840801324  +
+#   (-0.0025397905 *model_engine_cc_cqa )+
+#   (-5.6639859592 *model_engine_cyl_cqa )+
+#   (-4.3412887973 *model_engine_valves_per_cyl_cqa )+ 
+#   
+#   
+#   (4.7421993703 *model_engine_fuel_cqaElectric)+
+#   (-0.2274700024 *model_engine_fuel_cqaGasoline)+
+#   (-0.3102579206 *model_engine_fuel_cqaGasoline_Premium )+
+#   
+#     (-0.5078692030 *model_seats_cqa )+ 
+#     (0.1134142682 *model_doors_cqa)+
+#   
+#     (-0.0022952449 *model_weight_kg_cqa)+  
+#     (-0.0005682091 *model_length_mm_cqa )+
+#     (0.0045370687 *model_width_mm_cqa)+
+#     (0.0001804450 *model_height_mm_cqa)+
+#     (-0.0049901039 *model_wheelbase_mm_cqa)+  
+#     (0.8213966126 *model_lkm_mixed_cqa)+                
+#     (-0.0277522383 *model_fuel_cap_l_cqa) + 
+#     (1.1178661824 *model_engine_valves_cqa)+ 
+#     (-0.0520034255 *model_engine_power_kw_cqa)+
+#     (0.2049471528 *model_engine_torque_kgm_cqa)
+# 
+# print(y) # 70.9
+
+
+###### 시작 ~!
+
+# 목적식
+z <- c(-0.0025397905, 
+       -5.6639859592,
+       -4.3412887973,
+        # 4.7421993703 ,
+        # -0.2274700024,
+        # -0.3102579206 ,
+          -0.5078692030,
+          0.1134142682,
+          -0.0022952449,
+          -0.0005682091,
+          0.0045370687,
+          0.0001804450,
+          -0.0049901039, 
+          0.8213966126,           
+          -0.0277522383,
+          1.1178661824,
+          -0.0520034255,
+          0.2049471528)
+
+
+A <- matrix(c(1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+              1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+              0,1,0,0,0,0,0,0,0,0,0,0,0,0,0, 
+              0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+              0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
+              0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,
+              0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,
+              0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,
+              0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,
+              0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,
+              0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,
+              0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,
+              0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,
+              0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,
+              0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+              0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+              0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
+              0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,
+              0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,
+              0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,
+              0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,
+              0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,
+              0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,
+              0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,
+              0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+              0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,
+              0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+              0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+              0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+              0,0,0,0,0,0,0,0,0,0,0,0,0,0,1), 
+            nrow=30, byrow=TRUE)
+
+# 제약식의 우변
+B <- c(996,1600, 
+       3,4, 
+       2,4, 
+       2,5, 
+       2,5,
+       
+       790,2701, 
+       2695,4854, 
+       1410,2040,
+       1250,1960,
+       1867,2919,
+       
+       4.2,34,
+       11,65,
+       6,16,
+       40,155,
+       8,27)
+
+# 제약식의 부등호
+dir  <- c(">", "<=", ">", "<=", ">", "<=", ">", "<=", ">", "<=", 
+          ">", "<=", ">", "<=", ">", "<=", ">", "<=", ">", "<=", 
+          ">", "<=", ">", "<=", ">", "<=", ">", "<=", ">", "<=")
+
+# 최적해
+library(lpSolve)
+opt <-  lp(direction="min",
+           objective.in = z,
+           const.mat = A,
+           const.dir = dir,
+           const.rhs = B,
+           all.int = T)
+
+# 결과
+opt
+
+# 결정변수
+opt$solution
+
+# 가장 가까운 값을 가지는 차량 찾기 
+### Diesel
+    model_engine_fuel_cqaElectric=0
+    model_engine_fuel_cqaGasoline=0
+    model_engine_fuel_cqaGasoline_Premium=0
+    
+    y= 102.1840801324 +
+      (-0.0025397905 *opt$solution[1] )+
+      (-5.6639859592 *opt$solution[2] )+
+      (-4.3412887973 *opt$solution[3] )+ 
+      
+      (4.7421993703 *model_engine_fuel_cqaElectric)+
+      (-0.2274700024 *model_engine_fuel_cqaGasoline)+
+      (-0.3102579206 *model_engine_fuel_cqaGasoline_Premium )+
+      
+        (-0.5078692030 *opt$solution[4] )+ 
+        (0.1134142682 *opt$solution[5])+
+      
+        (-0.0022952449 *opt$solution[6])+  
+        (-0.0005682091 *opt$solution[7] )+
+        (0.0045370687 *opt$solution[8])+
+        (0.0001804450 *opt$solution[9])+
+        (-0.0049901039 *opt$solution[10])+  
+        (0.8213966126 *opt$solution[11])+                
+        (-0.0277522383 *opt$solution[12]) + 
+        (1.1178661824 *opt$solution[13])+ 
+        (-0.0520034255 *opt$solution[14])+
+        (0.2049471528 *opt$solution[15])
+    
+    print(y)
+    
+    Diesel=model_small %>%
+      filter( model_engine_fuel_cqa == "Diesel") %>% 
+      
+      mutate( dist=
+        (model_engine_cc_cqa -opt$solution[1])^2+
+        (model_engine_cyl_cqa -opt$solution[2])^2+
+        (model_engine_valves_per_cyl_cqa -opt$solution[3])^2+
+    
+        (model_seats_cqa -opt$solution[4])^2+
+        (model_doors_cqa -opt$solution[5])^2+
+    
+        (model_weight_kg_cqa-opt$solution[6])^2+
+        (model_length_mm_cqa-opt$solution[7])^2+
+        (model_width_mm_cqa-opt$solution[8])^2+
+        (model_height_mm_cqa-opt$solution[9])^2+
+        (model_wheelbase_mm_cqa-opt$solution[10])^2+
+    
+        (model_lkm_mixed_cqa-opt$solution[11])^2+
+        (model_fuel_cap_l_cqa-opt$solution[12])^2+
+        (model_engine_valves_cqa-opt$solution[13])^2+
+        (model_engine_power_kw_cqa-opt$solution[14])^2+
+        (model_engine_torque_kgm_cqa-opt$solution[15])^2
+        ) %>% 
+      arrange(dist)
+    
+    # 565  Ford Focus 1.6 TDCI 2008
+    
+    
+    
+    car_noise_complete %>% filter(X==565) %>% select(
+model_engine_cc_cqa ,
+model_engine_cyl_cqa ,
+model_engine_valves_per_cyl_cqa ,
+model_seats_cqa ,
+model_doors_cqa,
+model_weight_kg_cqa,
+model_length_mm_cqa ,
+model_width_mm_cqa,
+model_height_mm_cqa,
+model_wheelbase_mm_cqa,
+model_lkm_mixed_cqa,
+model_fuel_cap_l_cqa,
+model_engine_valves_cqa,
+model_engine_power_kw_cqa,
+model_engine_torque_kgm_cqa)
+    
+    
+    
+    
+    
+    
+    
+    
+
+```
+
+```{r}
+model_engine_fuel_cqaElectric=0
+    model_engine_fuel_cqaGasoline=0
+    model_engine_fuel_cqaGasoline_Premium=0
+    
+    y= 102.1840801324 +
+      (-0.0025397905 *opt$solution[1] )+
+      (-5.6639859592 *opt$solution[2] )+
+      (-4.3412887973 *opt$solution[3] )+ 
+      
+      (4.7421993703 *model_engine_fuel_cqaElectric)+
+      (-0.2274700024 *model_engine_fuel_cqaGasoline)+
+      (-0.3102579206 *model_engine_fuel_cqaGasoline_Premium )+
+      
+        (-0.5078692030 *opt$solution[4] )+ 
+        (0.1134142682 *opt$solution[5])+
+      
+        (-0.0022952449 *opt$solution[6])+  
+        (-0.0005682091 *opt$solution[7] )+
+        (0.0045370687 *opt$solution[8])+
+        (0.0001804450 *opt$solution[9])+
+        (-0.0049901039 *opt$solution[10])+  
+        (0.8213966126 *opt$solution[11])+                
+        (-0.0277522383 *opt$solution[12]) + 
+        (1.1178661824 *opt$solution[13])+ 
+        (-0.0520034255 *opt$solution[14])+
+        (0.2049471528 *opt$solution[15])
+    
+myftn <-function(theta) {
+  fit_glm= glm(dB_at_100kmh~ .,data=model_data)
+  #print(fit_glm$aic)
+  #return(fit_glm$aic)
+  return(predict(fit_glm,theta))
+}
+
+ss$coefficients
+
+result=
+  optim(par=data.frame(train[1,]),myftn) #,
+        # hessian=T,
+        # method="Nelder-Mead",
+        # control=list(fnscale=-1))
+
+result=
+  optimx(par=as.vector(train[1,]),fn=myftn,control=list(save.failures=TRUE, trace=0,maximize=FALSE), gs=10)
+         # ,method="Nelder-Mead",itnmax=1)
+result
+
+
+theta= train
+
+optim1 <- optimx( par = data.frame(theta[1,1],theta[1,2],theta[1,3],"Front Wheel Driv","Manual",
+                          theta[1,6],theta[1,7],theta[1,8],theta[1,9],theta[1,10],
+                          theta[1,11],theta[1,12],theta[1,13],theta[1,14],"Japan")
+                  , fn = myftn,
+                  control = list( all.methods=T ) ); optim1
+
+
+
+
+myfunction<-function(beta) {
+  
+  df = data.frame(dB_at_100kmh=beta[1],
+                  model_engine_cc_cqa=beta[2],
+                  model_engine_cyl_cqa=beta[3],
+                  model_drive_cqa="Front Wheel Driv",
+                  model_transmission_type_cqa="Manual",
+                  model_seats_cqa=beta[4],
+                  model_doors_cqa=beta[5],
+                  model_weight_kg_cqa=beta[6],
+                  model_width_mm_cqa=beta[7],
+                  model_height_mm_cqa=beta[8],
+                  model_wheelbase_mm_cqa=beta[9],
+                  model_lkm_mixed_cqa=beta[10],
+                  model_fuel_cap_l_cqa=beta[11],
+                  model_engine_valves_cqa=beta[12],
+                  model_engine_power_kw_cqa=beta[13],
+                  model_engine_torque_kgm_cqa=beta[14],
+                  make_country_cqa="Japan"
+                  ) 
+  return( predict(fit_glm,df) ) # beta는 데이터 프레임 형태
+}
+
+
+result<-optimx(par=c(train[1,1],train[1,2],train[1,3],
+                     train[1,6],train[1,7],train[1,8],train[1,9],train[1,10],
+                     train[1,11],train[1,12],train[1,13],train[1,14],train[1,15],train[1,16]
+                     
+                     ),lower=0, upper=5000, myfunction,control=list(maximize=F,save.failures=T,trace=0))
+  # par -vector 형태
+
+
+# params=train[1,]
+# optimx(params, function(x) 
+#   firstorder(x[1], x[2],x[3], x[4],x[5], x[6],x[7], x[8],x[9], x[10],x[11], x[12],x[13], x[14],x[15]),myfunction,
+#   control=list(maximize=F,save.failures=T,trace=0))
+
+
+
+######
+
+
+
+
+
+
+
+
+
+```
+
+
+
+
+
+
+

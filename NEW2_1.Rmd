@@ -1,0 +1,545 @@
+---
+title: "Car Noise Data Analysis"
+author: "jeeyeonLIM"
+output: 
+  html_document :
+    toc : true
+---
+
+
+- `2. 모두 허용 기준 내에 속하는 경우 → 물리적 기준(차종 등)으로 군집화 후 동일 그룹 내에 소음에 영향을 미치는 요인 분석`
+- 특정 그룹의 차종이 일정 소음을 얻기 위한 최적화 모델
+- 예를 들어, 세단 제작 시 소음을 70(=일정소음)으로 맞춰서 개발하고 싶을 때, 어떤어떤 조건의 값들을 어떻게 배치하는것이 최적인가, 엔진은 뭐고 문은 몇개고 축간거리는 어느정도로 하면 되는가?
+- 물리적 기준(차종 등)으로 군집화 후 동일 그룹 내에 소음에 영향을 미치는 요인 분석
+
+
+- 전장 : 자동차 코부터 끝까지, 자동차의 앞뒤 길이입니다.    model_length_mm_cqa
+- 전폭 : 사이드미러를 제외한 자동차의 좌우 폭의 길이입니다.   model_width_mm_cqa 
+- 전고 : 타이어가 바닥에 닿는 부분부터 자체의 머리 꼭대기 까지, 자동차의 높이 입니다.  model_height_mm_cqa
+- 연비 : model_engine_cc_cqa
+
+- 경차 : 전장 3600mm 이내, 전폭 1600mm 이내, 전고 2000mm 이내, 엔진 1000cc 이하, 5인승 이하
+
+- 소형차 : 전장 4700mm 이내, 전폭 1700mm 이내, 전고 2000mm 이내, 엔진 1600cc 미만, 10인승 이하
+- 중형차 : 전장, 전폭, 전고 중 소형차 기준을 하나라도 초과, 엔진 1600cc 이상 2,000cc 미만, 10인승 이하
+- 대형차 : 전장, 전폭, 전고 중 소형차 기준을 하나라도 초과, 엔진 2000cc 이상, 10인승 이하
+
+
+- 1. 대/중/소 분류하여 분석 진행
+  → EDA & 단변량 분석
+
+- 2. 소음 예측 모형 생성 (3개 (대,중,소) 의 모형 생성)
+  → training set / test set 구분하여 검증
+
+- 3. 최종 모형으로 대/중/소 별 소음을 최소로 할 수 있는 디자인 및 예상 소음 제시 
+  → 예를 들어, 소형 자동차는 차축의 길이는 얼마로 하고 엔진은 무엇으로 하고..등등을 한페이지로 표현
+
+# 1. Data Handling 
+
+## 1차 -제거  
+```{r}
+  ##### Kaggle na 
+  showNA <- function(mydf, mytitle){
+    mydf %>% is.na %>% reshape2::melt() %>% 
+    ggplot(data = .,aes(x = Var2, y = Var1)) + 
+      geom_tile(aes(fill = value,width=0.95)) + 
+      coord_flip() + 
+      scale_fill_manual(values = c("grey95","grey20")) + 
+      theme_fivethirtyeight(12) + 
+      theme(legend.position='None',
+            legend.direction='horizontal',
+            panel.grid.major=element_blank(),
+            axis.title.x=element_blank(),
+            axis.title.y=element_blank(),
+            plot.margin=unit(c(.1,.1,.1,.1), "cm")) + 
+      labs(title = 'Data completeness, missing values in black', subtitle = mytitle)
+  }
+  
+# 1. Data Setting, Handling
+
+options(scipen=100)
+library(ggplot2)
+library(tidyverse)
+library(reshape2)
+library(ggthemes)
+library(ggridges) 
+library(factoextra)
+library(NbClust)
+library(RColorBrewer)
+
+library(VGAM) # vglm -> predict group (s/m/l)
+
+
+### 1. Kaggle 데이터
+car_noise= read.csv('car_noise_specification_datasets.csv', 
+             sep = "\t", 
+             stringsAsFactors = F, 
+             na.strings = c("", "NA"))
+
+### 2. 변수 제거
+car_noise_complete = car_noise %>% filter( model_id != "NaN") %>% 
+    select(
+      
+    # 결측치 100% (원인 변수를 찾지 못하기 때문에 제외)
+        -model_co2_cqa, -ExtColors_cqa	,-IntColors_cqa,
+        
+    # 결측치 60%이상
+    # EDA 할때는 살펴보고 싶어서 car_noise_complete 에는 남겨둠.
+        # -model_engine_bore_mm_cqa,
+        # -model_engine_bore_in_cqa,
+        # -model_engine_stroke_mm_cqa,
+        # -model_engine_stroke_in_cqa,
+        # 
+        # -model_0_to_100_kph_cqa,
+        # 
+        # -model_top_speed_kph_cqa,
+        # -model_top_speed_mph_cqa,
+      
+    # 중복값 
+        -model_id,
+        -model_id_cqa,
+        -make_display_cqa,
+        -model_make_display_cqa,
+        -model_make_id_cqa,
+        -model_name_cqa,
+        -model_year_cqa,
+  
+    # 단위 중복칼럼 제거 
+      -model_weight_lbs_cqa,
+      -model_height_in_cqa,
+      -model_wheelbase_in_cqa,
+      
+      -model_width_in_cqa,
+      -model_length_in_cqa,
+      
+      -model_mpg_city_cqa,
+      -model_mpg_hwy_cqa,
+      -model_mpg_mixed_cqa,
+      -model_fuel_cap_g_cqa,
+      
+      -model_engine_ci_cqa,
+      -model_engine_l_cqa,
+      
+      -model_engine_power_hp_cqa,
+      -model_engine_power_ps_cqa,
+      -model_engine_power_rpm_cqa,
+      
+      -model_engine_torque_lbft_cqa,
+      -model_engine_torque_nm_cqa,
+      -model_engine_torque_rpm_cqa
+    )
+
+```
+
+## 2차 - 전처리 
+```{r}
+
+### 범주형 변수 처리 
+car_noise_complete =
+  car_noise_complete  %>% 
+  mutate(model_engine_type_cqa = 
+           ifelse(model_engine_type_cqa=="Inline","in-line",model_engine_type_cqa ),
+         
+         model_engine_position_cqa = 
+           ifelse(model_engine_position_cqa== "Front ", "Front", model_engine_position_cqa),
+         
+         model_engine_fuel_cqa= 
+           ifelse(model_engine_fuel_cqa %in% c("Flex-Fuel (Unleaded/E85)", "Flex Fuel"),"Gasoline",
+                  ifelse(model_engine_fuel_cqa %in% 
+                           c("Premium Unleaded (Recommended)", "Premium Unleaded (Required)"),"Gasoline - Premium",
+                         ifelse(model_engine_fuel_cqa %in%
+                                  c("Diesel / Electric Hybrid", "Gasoline / Electric Hybrid"),"Electric",
+                                ifelse(model_engine_fuel_cqa =="Regular Unleaded", "Gasoline(Unleaded)",
+                                       model_engine_fuel_cqa)))),
+         
+         model_drive_cqa = 
+           ifelse(model_drive_cqa %in% c("AWD ","AWD"), "Four Wheel Drive",
+                ifelse(model_drive_cqa %in% c("front","Front"), "Front Wheel Driv",
+                       ifelse(model_drive_cqa== "4WD" , "All Wheel Drive",
+                              ifelse(model_drive_cqa=="Rear","Rear Wheel Drive",model_drive_cqa)))),
+         
+         model_transmission_type_cqa = 
+           ifelse(model_transmission_type_cqa %in% 
+                    c("6-speed manual","5-speed manual","6-speed manual ","7-speed manual"),"Manual",
+                  ifelse(model_transmission_type_cqa %in% 
+                           c("6-speed shiftable automatic","6-speed automatic","5-speed automatic",
+                             "5-speed shiftable automatic","8-speed shiftable automatic","4-speed automatic",
+                             "6-speed automatic ","7-speed automatic ","7-speed shiftable automatic",
+                             "8-speed automatic","automatic"),"Automatic",
+                         ifelse(model_transmission_type_cqa %in% 
+                           c("6-speed automated manual","7-speed automated manual"),"Automated Manual",
+                           model_transmission_type_cqa
+                         )))) %>% # 0..!!! 
+  ##### 범주형 변수의 그룹 내 적은 멤버 같는 경우 전처리
+  filter( model_engine_type_cqa %in% c("in-line","V","boxer"),
+          model_drive_cqa != "Not Available",   # boxer !!!!!!!
+          model_transmission_type_cqa != "Single Speed") 
+
+
+
+table(car_noise_complete$model_engine_type_cqa)
+table(car_noise_complete$model_engine_position_cqa)
+table(car_noise_complete$model_engine_fuel_cqa)
+table(car_noise_complete$model_drive_cqa)
+table(car_noise_complete$model_transmission_type_cqa)
+
+
+### 아래 두 변수는 각각의 그룹에 따라서 다른 Handling 해주기 (기타로 묶거나 등등..)
+a=table(car_noise_complete$make_country_cqa) ;View(a)
+a=table(car_noise_complete$model_body_cqa) ;View(a)
+
+ 
+### 어떻게 해야할지 모르겠다...
+
+# model_engine_type_cqa           # 위에서 처리함 
+    # boxer      electric          Flat       in-line Not Available        single             V             W 
+    #    24             5            11           734             7             1           270             4 
+# model_engine_position_cqa       # 고민중. medium_eda ----> delete!!!!!!!!
+    #  Front Middle   Rear 
+    #   1009      7     12 
+   
+# model_engine_fuel_cqa
+    # Flex Fuel
+    # Flex-Fuel (Unleaded/E85)
+    #  -> Gasoline
+    # 
+    # Premium Unleaded (Recommended)
+    # Premium Unleaded (Required)
+    # -> Gasoline - Premium
+    # 
+    # Diesel / Electric Hybrid
+    # Gasoline / Electric Hybrid
+    # - > Electric
+    # 
+    # Regular Unleaded (무연휘발유)
+    # -> Gasoline(Unleaded)
+    # 
+    #  'Premium recommended but not required(프리미엄 무연 휘발유를 추천하나, 요구 사항은 아님)'으로 표시돼 있다. 
+    # 말리부 1.5 터보는 추천 연료 타입에 'regular unleaded(일반 무연 휘발유)'로 표기됐다.
+    # 
+    # Premiun Required인 경우는 엔진의 기계적인 설계부터 고급휘발유에 맞추어져 있다고 보면 된다.
+
+# model_drive_cqa
+    # Not Available 
+    # -> 삭제
+
+# model_transmission_type_cqa
+    # 아래 네개로 재범주화함
+    # Manual
+    # Automatic
+    # CVT
+    # Automated Manual
+    # 
+    # 
+    # 6-speed manual
+    # 5-speed manual
+    # 6-speed manual
+    # 7-speed manual
+    # -> Manual
+    # 
+    # 6-speed shiftable automatic
+    # 6-speed automatic
+    # 5-speed automatic
+    # 5-speed shiftable automatic
+    # 8-speed shiftable automatic
+    # 4-speed automatic
+    # 6-speed automatic
+    # 7-speed automatic
+    # 7-speed shiftable automatic
+    # 8-speed automatic
+    # automatic
+    # -> Automatic
+    # 
+    # 
+    # 6-speed automated manual
+    # 7-speed automated manual
+    # -> Automated Manual
+    # 
+    # Single Speed
+    # -> 삭제 
+
+
+# 범주형 변수 확인 
+car_noise_complete %>% select_if(is.character) %>% colnames()
+
+
+
+##############
+# 연속형 변수 처리 
+car_noise_complete= car_noise_complete #%>% model_engine_cc_cqa
+# 0존재 
+
+
+# numeric 확인
+
+
+```
+
+### 3차. 차종구분 & Missing handling 
+- model_length_mm_cqa
+- model_width_mm_cqa
+- model_height_mm_cqa
+- model_engine_cc_cqa
+
+```{r}
+
+car_noise_complete = 
+  car_noise_complete %>% 
+  mutate(type=
+           ifelse(model_length_mm_cqa<=4700&model_width_mm_cqa<=1700&model_height_mm_cqa<=2000&
+                    model_engine_cc_cqa<=1600,"S",
+                  
+           ifelse((model_length_mm_cqa>4700|model_width_mm_cqa>1700|model_height_mm_cqa>2000)&
+                    (model_engine_cc_cqa >=1600& model_engine_cc_cqa<=2000),"M",  ##### 1600~2000 -> 1300~2000 변화 고려
+                  
+           ifelse((model_length_mm_cqa>4700|model_width_mm_cqa>1700|model_height_mm_cqa>2000)&
+                    model_engine_cc_cqa>2000,"L",NA))),
+         type_num = ifelse(type=="S",1,
+                           ifelse(type=="M",2,
+                                  ifelse(type=="L",3,NA))))
+
+nrow(car_noise_complete %>% filter(is.na(type)))
+table(car_noise_complete$type)
+
+
+type_complete=car_noise_complete %>% filter(!is.na(type))
+type_non_complete=car_noise_complete %>% filter(is.na(type))
+set.seed(1)
+idx=sample(1:nrow(type_complete), nrow(type_complete)*0.8)
+type_complete_train= type_complete[idx,]
+type_complete_test= type_complete[-idx,]
+
+# brand_grp =type_complete %>% 
+#   group_by(brand) %>% summarise(n=n()) %>% ungroup() %>% filter(n>1)
+#install.packages("VGAM")
+
+fit.Logistic<- vglm(type_num~
+          year+dB_at_idle+dB_at_50kmh+dB_at_80kmh+dB_at_100kmh+dB_at_120kmh+dB_at_140kmh+
+            model_engine_cc_cqa,
+          family=multinomial, 
+          data=type_complete_train)
+
+  # NA 값 없는 값 위주로 대입, 배기량(model_engine_cc_cqa) 같은 경우 차종을 분류하는 가장 적합한 기준이기때문에
+#summary(fit.Logistic) 
+
+prob <- predict(fit.Logistic, type_complete_train, type="response") 
+predictions <- c(apply(prob, 1, which.max))
+table(type_complete_train$type_num, predictions)
+
+prob <- predict(fit.Logistic, type_complete_test, type="response") 
+predictions <- c(apply(prob, 1, which.max))
+table(type_complete_test$type_num, predictions) 
+
+rf <- randomForest(as.factor(type_num)~
+          year+dB_at_idle+dB_at_50kmh+dB_at_80kmh+dB_at_100kmh+dB_at_120kmh+dB_at_140kmh+
+            model_engine_cc_cqa,
+          data=type_complete_train,
+          importance=T)
+
+table(type_complete_test$type_num, predict(rf,  type_complete_test))
+
+
+### 본격적인 Predict
+
+### Predict ~! 
+# lm
+prob <- predict(fit.Logistic, type_non_complete, type="response") 
+predictions <- apply(prob, 1, which.max)
+type_non_complete$type_num_new = predictions 
+
+# rf
+# 
+# predictions=  predict(rf,  type_non_complete) 
+# type_non_complete$type_num_new =predictions
+
+
+
+
+car_noise_complete= car_noise_complete %>% 
+  left_join(type_non_complete %>% select(X,type_num_new) , by=c("X"="X"))
+car_noise_complete=car_noise_complete %>% 
+  mutate(type_num_final = ifelse(!is.na(type_num),type_num,type_num_new))
+
+
+```
+
+
+# 2. EDA
+## Small vs Medium vs Large 
+```{r}
+
+### Categorical Visualization Function 
+categorical_grp = function(data, var, my_title=''){
+  aa=data.frame( table(data$type_num_final, var))
+  sum_table=aa %>% group_by(Var1) %>% summarise(sum=sum(Freq))
+  grp= aa %>% left_join(sum_table, by=c("Var1"="Var1")) %>% 
+    mutate(percent= Freq/sum) %>% 
+    ggplot(aes(x = Var1, y = var, fill = percent, label = sprintf("%1.1f%%", 100*percent) ))+
+      geom_tile()+ theme_bw() +
+    theme(plot.background = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     panel.grid.major = element_blank(),
+                     panel.background = element_blank(),
+                     axis.line = element_blank(),
+                     axis.ticks = element_blank(),
+                     strip.background = element_rect(fill = "white", colour = "white"),
+                     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))+
+    geom_text(size=5,colour = "black") +
+    scale_fill_gradientn("value", colours = rev(brewer.pal(9, "Spectral")), na.value = "white")+
+  labs(title = my_title, x = NULL, fill = "type")
+  print(grp)
+}
+
+### Numerical Visualization Function 
+numeric_grp = function(data, var, my_title=''){
+  num=data.frame( type=data$type_num_final, var)
+  num_grp=
+    ggplot(num, aes(x = var, y =  type)) +
+    geom_density_ridges(aes(fill = type), alpha=0.2, scale=0.8) +
+    #geom_bar(stat='identity')+
+    geom_boxplot(aes(fill = type), width = 0.06, outlier.shape = NA)+theme_bw() + 
+    theme(axis.text.x = element_text(size=15),
+          axis.text.y = element_text(size=15),
+          axis.title=element_text(size=15),
+          legend.text = element_text(size = 15))+
+  labs(title = my_title, x = NULL, fill = "type") 
+  print(num_grp)
+}
+
+
+input_data= car_noise_complete
+      # --------------
+      input_data %>% select_if(is.character) %>% colnames()
+      input_data %>% select_if(is.numeric) %>% colnames()
+      
+      categorical_grp(input_data,input_data$model_engine_fuel_cqa,"model_engine_fuel_cqa") 
+      categorical_grp(input_data,input_data$model_body_cqa,"model_body_cqa") 
+      categorical_grp(input_data,input_data$brand,"brand")
+      categorical_grp(input_data,input_data$model_engine_position_cqa,"model_engine_position_cqa") 
+      categorical_grp(input_data,input_data$model_engine_type_cqa,"model_engine_type_cqa") 
+      categorical_grp(input_data,input_data$model_engine_compression_cqa,"model_engine_compression_cqa") 
+      categorical_grp(input_data,input_data$model_drive_cqa,"model_drive_cqa") 
+      categorical_grp(input_data,input_data$model_transmission_type_cqa,"model_transmission_type_cqa") 
+      categorical_grp(input_data,input_data$make_country_cqa,"make_country_cqa")
+      
+input_data= car_noise_complete %>% 
+  mutate(type_num_final = as.character(ifelse(!is.na(type_num),type_num,type_num_new) ))
+
+      a=numeric_grp(input_data, input_data$dB_at_idle,"dB_at_idle")
+      b=numeric_grp(input_data, input_data$dB_at_50kmh,"dB_at_50kmh")
+      c=numeric_grp(input_data, input_data$dB_at_80kmh,"dB_at_80kmh")
+      d=numeric_grp(input_data, input_data$dB_at_100kmh,"dB_at_100kmh")
+      e=numeric_grp(input_data, input_data$dB_at_120kmh,"dB_at_120kmh")
+      f=numeric_grp(input_data, input_data$dB_at_140kmh,"dB_at_140kmh")
+      
+      numeric_grp(input_data, input_data$model_engine_cc_cqa,"model_engine_cc_cqa")
+      numeric_grp(input_data, input_data$model_engine_cyl_cqa,"model_engine_cyl_cqa")
+      numeric_grp(input_data, input_data$model_engine_valves_per_cyl_cqa,"model_engine_valves_per_cyl_cqa")
+      numeric_grp(input_data, input_data$model_engine_bore_mm_cqa,"model_engine_bore_mm_cqa")
+      numeric_grp(input_data, input_data$model_engine_stroke_mm_cqa,"model_engine_stroke_mm_cqa")
+      numeric_grp(input_data, input_data$model_top_speed_kph_cqa,"model_top_speed_kph_cqa")
+      numeric_grp(input_data, input_data$model_0_to_100_kph_cqa,"model_0_to_100_kph_cqa")
+      numeric_grp(input_data, input_data$model_seats_cqa,"model_seats_cqa")
+      numeric_grp(input_data, input_data$model_doors_cqa,"model_doors_cqa")
+      numeric_grp(input_data, input_data$model_weight_kg_cqa,"model_weight_kg_cqa")
+      numeric_grp(input_data, input_data$model_width_mm_cqa,"model_width_mm_cqa")
+      numeric_grp(input_data, input_data$model_height_mm_cqa,"model_height_mm_cqa")
+      numeric_grp(input_data, input_data$model_wheelbase_mm_cqa,"model_wheelbase_mm_cqa")
+      numeric_grp(input_data, input_data$model_lkm_hwy_cqa,"model_lkm_hwy_cqa")
+      numeric_grp(input_data, input_data$model_lkm_mixed_cqa,"model_lkm_mixed_cqa")
+      numeric_grp(input_data, input_data$model_lkm_city_cqa,"model_lkm_city_cqa")
+      
+      numeric_grp(input_data, input_data$model_fuel_cap_l_cqa,"model_fuel_cap_l_cqa")
+      numeric_grp(input_data, input_data$model_sold_in_us_cqa,"model_sold_in_us_cqa")
+      numeric_grp(input_data, input_data$model_engine_bore_in_cqa,"model_engine_bore_in_cqa")
+      numeric_grp(input_data, input_data$model_engine_stroke_in_cqa,"model_engine_stroke_in_cqa")
+      numeric_grp(input_data, input_data$model_engine_valves_cqa,"model_engine_valves_cqa")
+      numeric_grp(input_data, input_data$model_engine_power_kw_cqa,"model_engine_power_kw_cqa")
+      numeric_grp(input_data, input_data$model_engine_torque_kgm_cqa,"model_engine_torque_kgm_cqa")
+      numeric_grp(input_data, input_data$model_top_speed_mph_cqa,"model_top_speed_mph_cqa")
+      # --------------
+
+
+```
+
+
+
+
+# 3. Modeling
+
+## 0.model_df 
+```{r}
+
+model_df = car_noise_complete %>% 
+  mutate(brand = as.factor(brand),
+          model_body_cqa = as.factor(model_body_cqa),
+          model_engine_position_cqa= as.factor(model_engine_position_cqa),
+          model_engine_type_cqa= as.factor(model_engine_type_cqa),
+          model_engine_fuel_cqa= as.factor(model_engine_fuel_cqa),
+          model_drive_cqa= as.factor(model_drive_cqa),
+          model_transmission_type_cqa= as.factor(model_transmission_type_cqa),
+         make_country_cqa = as.factor(make_country_cqa)) %>% 
+  select(
+    # y setting
+          -dB_at_idle,
+          -dB_at_50kmh,
+          -dB_at_80kmh,
+          #-dB_at_100kmh,
+          -dB_at_120kmh,
+          -dB_at_140kmh,
+    # 차종 특정 - 모델명, 사양(spec detail) 등
+          #-X,
+          -model,-brand,-spec,-model_trim_cqa,-type_num,-type,-type_num_new,
+    # 결측치 60%이상
+         -model_engine_bore_mm_cqa,-model_engine_bore_in_cqa,    #실린더 단면적 지름
+         -model_engine_stroke_mm_cqa,-model_engine_stroke_in_cqa,#피스톤이 왔다갔다하는 거리 
+         -model_top_speed_kph_cqa,-model_top_speed_mph_cqa,      #최고속도
+         -model_0_to_100_kph_cqa,      #제로백 
+         -model_sold_in_us_cqa,        #미국에서 팔리는가
+      
+      # 각각이 다음과 같은 이유로 제외 
+        -model_lkm_hwy_cqa, -model_lkm_city_cqa,  # 연비 
+          # 결측값 각각 400 이상.model_lkm_mixed_cqa를 대신에 넣음.
+    
+         -model_engine_compression_cqa      # 엔진 압축비 (11:2:) *************
+          #범주 너무 많음. 무조건 제외. or 가공해서 사용할 것
+    
+         
+    
+         ###-model_engine_position_cqa, # 엔진위치_(차량 구동방식이랑 같이보기)
+         
+         ###-model_drive_cqa,           # 차량 구동방식(전륜구동 등등)
+           # 범주가 너무 많아서 제외
+    
+        # -model_engine_valves_per_cyl_cqa,   #실린더 하나당 밸브 수
+          # 다중공선성 
+        #-model_engine_cc_cqa,               # 엔진 배기량 
+          # 배기량 다른 변수들하고 상관관계 너무 큼. 
+    
+    
+    
+    
+        # -model_engine_type_cqa,     # 엔진 형태(직렬엔진, V형엔진)
+        # -make_country_cqa,
+        # -model_transmission_type_cqa,# 변속기 타입 (자동, 수동, 매뉴얼, 6-speed등등) 
+        # -model_body_cqa,            # 차 몸체 형태
+        # -model_engine_fuel_cqa     # 엔진 연료(가솔린 디젤 등) 
+
+        )
+showNA(model_df, "model_df dataframe")
+
+
+### Small / Medium / Large 나누기!
+model_small= model_df %>%filter(type_num_final==1) %>% select(-type_num_final)
+model_medium= model_df %>%filter(type_num_final==2) %>% select(-type_num_final)
+model_large= model_df %>%filter(type_num_final==3) %>% select(-type_num_final)
+
+
+
+```
+
+
+
+
+
+

@@ -2,13 +2,16 @@
 | date | 주제 | 분석 내용 | 느낀점 |
 | :---: |:---:|:---:|:---:|
 | 2018.10.01 ~ 2018.10.28 | [Doodle Recognition](https://www.kaggle.com/c/quickdraw-doodle-recognition) | [낙서 분류하기](https://github.com/jeeyeonLIM/Graduate_Course/tree/master/Financial%20engineering/Kaggle_Doodle_Recognition_Challenge) | CNN 학습 | 
-| 2020.09.05 ~ 2020.09.09 | [Car Noise](https://www.kaggle.com/murtio/car-noise-specification) | [실내 소음에 영향 미치는 요인 탐색](https://github.com/jeeyeonLIM/kaggle_study/blob/master/1_handling.Rmd) |  |
+| 2020.09.05 ~ 2020.09.09 | [Car Noise](https://www.kaggle.com/murtio/car-noise-specification) | - 1차분석 : [Data Handling](https://github.com/jeeyeonLIM/kaggle_study/blob/master/1_handling.Rmd), [EDA](https://github.com/jeeyeonLIM/kaggle_study/blob/master/2_EDA.Rmd)  |  |
+| 2020.09.15 ~ 2020.09.24 |  | - 최종분석 : [Data Handling](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_1.Rmd), [Small](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_small.Rmd), [Medium](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_medium.Rmd), [Large](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_large.Rmd)  |  |
+
+
+
 
 
 ### Car Noise 
 #### [2020/09/10]
-- [1_handling](https://github.com/jeeyeonLIM/kaggle_study/blob/master/1_handling.Rmd)
-- [2_EDA](https://github.com/jeeyeonLIM/kaggle_study/blob/master/2_EDA.Rmd)
+
 - 차량 부품 및 기술 공부에서 모든 시간을 변수의 의미 찾고 정리하는 데 소요했다. 
 - 문제 정의와, 모델링을 위한 Y 기준 정의, NA값이 너무 많아서 처리하는 데 어려움을 겪었다.
 - Q. 이렇게 결측치가 너무 많은 경우 대체방법을 사용하기 애매한 부분이 있었다. 

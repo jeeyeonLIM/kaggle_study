@@ -5,11 +5,10 @@
 | 2020.09.05 ~ 2020.09.09 | [Car Noise](https://www.kaggle.com/murtio/car-noise-specification) | - 1차분석 : [Data Handling](https://github.com/jeeyeonLIM/kaggle_study/blob/master/1_handling.Rmd), [EDA](https://github.com/jeeyeonLIM/kaggle_study/blob/master/2_EDA.Rmd)  |  |
 | 2020.09.15 ~ 2020.09.24 | [Car Noise](https://www.kaggle.com/murtio/car-noise-specification) | - 최종분석 : [Data Handling](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_1.Rmd), [Small](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_small.Rmd), [Medium](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_medium.Rmd), [Large](https://github.com/jeeyeonLIM/kaggle_study/blob/master/NEW2_large.Rmd)  |  |
 
-
-
-
-
 ### Car Noise 
+
+- [최종 분석 결과 자료](https://github.com/jeeyeonLIM/kaggle_study/blob/master/car_noise_%EC%B5%9C%EC%A2%85%EB%B6%84%EC%84%9D%20%EA%B2%B0%EA%B3%BC%20%EC%A0%95%EB%A6%AC.pdf)
+
 #### [2020/09/10]
 
 - 차량 부품 및 기술 공부에서 모든 시간을 변수의 의미 찾고 정리하는 데 소요했다. 
